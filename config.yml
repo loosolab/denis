@@ -1,0 +1,107 @@
+run_params:
+  output: 'output_dir'
+
+footprint:
+  ##### MANDATORY INPUT FILES #####
+  genome_fasta: ''
+  score_bigwig: ''
+  peak_bed: ''
+  motif_file: ''
+
+  # peak parameter
+  # Extension of base pairs on both sides for all regions in peak_bed. To ensure full peak is collected.
+  extend_region: 100
+
+  # footprint parameter#
+  # Minimum local height of a footprint to not be excluded as noise.
+  min_local_height: 0.05
+  # Accepted slope range to identify sloped peaks. E.g. 35 accepts thresholds between 15% to 85% of the observed slopes in the region.
+  percentile_slope: 35
+  # Minimum and maximum allowed footprint size
+  min_size: 4
+  max_size: 100
+  # Minimum average a footprint must have.
+  min_score: 0.5
+  # Maximum gap size between two footprints to be able to merge
+  gap: 10
+  # Maximum gap depth between two footprints to be able to merge
+  gap_depth: 0.2
+
+  # motif parameter
+  # P-value like filter for motif binding. Values closer to 0 mean smaller distance between motif and binding site.
+  moods_threshold: 0.00005
+
+motif:
+  discovery:
+    # number of consecutive retries if no motif is found
+    retry: 10
+    # method to escape a local optimum; no knee available for filter
+    # strongest: remove motif with lowest e-value
+    # weakest: remove motif with highest e-value
+    # random: randomly remove footprints
+    escape_method: 'strongest' # ['strongest', 'weakest', 'random']
+    # the type if knee function used for knee finding
+    knee_function: 'linear' # ['linear', curved']
+    # Whether knee filter should be applied.
+    keep_all: True
+    threads: 15
+    # Minimum and maximum allowed motif width
+    min_len: 4
+    max_len: 10 # max len must be <= footprint min_size (ONLY for mod = oops)
+    # Minimum e-value a motif must have
+    e_value: 0.05
+    # Sequence binding model
+    # oops: Exactly one binding position per sequence
+    # zoops: Zero or one binding position per sequence
+    # anr: Any number of none overlapping binding positions per sequence
+    mod: 'anr' # ['oops', 'zoops', 'anr']
+    # How to calculate the motifs statistical significance
+    # See https://meme-suite.org/meme/doc/meme.html?man_type=web
+    objfun: 'classic' # ['classic', 'de', 'se', 'cd', 'ce', 'nc']
+    # Maximum number of motifs per iteration
+    nmotifs: 30
+    # Minimum and maximum sites a motif must have. Note maximum sites has a heavy impact on runtime and should be increased with caution.
+    minsites: 2
+    maxsites: 2000
+    # Number of allowed iterations
+    # -1 for unlimited
+    maxiter: -1
+
+  ### control motifs ###
+  # select known motifs to compare against
+  known:
+    # Number of known motifs to be selected as control
+    # chosen to have a high distance from each other
+    quantity: 15 
+    # additional selection for motifs of interest. Can be id or name e.g.:
+    # - 'MA0677.1'
+    # or
+    # - 'Nr2f6'
+    motifs: 
+
+  processing:
+    # Distance threshold for motifs to be merged. Motifs with a distance below this threshold will be merged to a consensus motif.
+    threshold: 0.5
+    # Resolution of motif sequence logo
+    dpi: 300
+
+evaluation:
+  motif:
+  # Number of most similar database motifs that is stored in file.
+    top_x: 10
+
+  rescan:
+    # Strictness for binding site matching motif.
+    pvalue: 0.0001
+    cores: 15
+    split: 100
+
+annotation:
+  gtf: '' # Leave empty to skip annotation
+  config_template: 'uropa_template.json'
+  # select groups to annotate:
+  #  discovered = 'motif_\d+_motif_\d+'
+  #  known_shuffled = 'shuffled_.+_shuffled_.+'
+  #  all = '.+' (or leave empty)
+  annotate: ['.+']
+  threads: 15

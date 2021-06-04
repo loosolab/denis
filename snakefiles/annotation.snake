@@ -1,0 +1,61 @@
+import os
+import glob
+import re
+
+# only run rules if there is a gtf file
+if config['annotation']['gtf']:
+    # assemble wildcard constraint
+    MOTIF_CONSTRAINT = []
+    if config['annotation']['annotate']:
+        MOTIF_CONSTRAINT = "|".join(config['annotation']['annotate'])
+    else:
+        MOTIF_CONSTRAINT.append('.+')
+
+    rule create_uropa_config:
+        input:
+            template=config['annotation']['config_template'],
+            gtf=config['annotation']['gtf'],
+            bed=os.path.join(OUTPUTDIR, "4_annotation/open_binding_sites/{motif}.bed"), # os.path.join(OUTPUTDIR, "3_evaluation/rescan/{motif}.bed"),
+        conda: "../environments/motif.yml"
+        output:
+            os.path.join(OUTPUTDIR, "4_annotation/uropa/config/uropa_config_{motif}.json")
+        wildcard_constraints:
+            motif=MOTIF_CONSTRAINT
+        script:
+            "../scripts/create_uropa_config.py"
+
+    checkpoint uropa_annotate_motifs:
+        input: 
+            config=os.path.join(OUTPUTDIR, "4_annotation/uropa/config/uropa_config_{motif}.json")
+        conda: "../environments/motif.yml"
+        #params:
+        threads: config['annotation']['threads']
+        log:
+            os.path.join(OUTPUTDIR, "logs/uropa/{motif}.log")
+        output: 
+            dir=directory(os.path.join(OUTPUTDIR, "4_annotation/uropa/{motif}/"))
+        wildcard_constraints:
+            motif=MOTIF_CONSTRAINT
+        shell: 
+            """
+            uropa --input {input.config} --outdir {output.dir} --threads {threads} --log {log} &> /dev/null
+            """
+
+    def get_names(wildcards):
+        return list(map(lambda x: os.path.basename(os.path.splitext(x)[0]), glob.glob(os.path.join(checkpoints.rescan.get(**wildcards).output[0], "*.bed"))))
+
+    def get_hits(w):
+        return [glob.glob(checkpoints.uropa_annotate_motifs.get(**{"motif": m}).output[0] + "*allhits.txt")[0] for m in get_names(w) if re.match(f"^{MOTIF_CONSTRAINT}$", m)]
+
+    rule feature_enrichment:
+        input:
+            hits_tables=get_hits,
+            ranks_table=os.path.join(OUTPUTDIR, "3_evaluation/motif_ranks.tsv")
+        conda: "../environments/motif.yml"
+        output:
+            plot=os.path.join(OUTPUTDIR, "4_annotation/feature_enrichment_plot.pdf"),
+            table=os.path.join(OUTPUTDIR, "4_annotation/feature_enrichment_table.tsv")
+        wildcard_constraints:
+            motif=MOTIF_CONSTRAINT
+        script:
+            "../scripts/feature_enrichment.py"

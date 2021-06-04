@@ -1,0 +1,41 @@
+rule footprint_extraction:
+    input:
+        fasta=config["footprint"]["genome_fasta"],
+        bigwig=config["footprint"]["score_bigwig"],
+        bed=config["footprint"]["peak_bed"],
+        motif=config["footprint"]["motif_file"]
+    output:
+        directory(os.path.join(OUTPUTDIR, "1_footprints/1_extraction")),
+        os.path.join(OUTPUTDIR, "1_footprints/1_extraction/footprints.bed"),
+        os.path.join(OUTPUTDIR, "1_footprints/1_extraction/motifs.bed"),
+        os.path.join(OUTPUTDIR, "1_footprints/1_extraction/new_footprints.bed"),
+        os.path.join(OUTPUTDIR, "1_footprints/1_extraction/footprint_extraction.pdf")
+    log:
+        os.path.join(OUTPUTDIR, "logs/footprint_extraction.log")
+    conda: "../environments/motif.yml"
+    params:
+        extend_region=config["footprint"]["extend_region"],
+        min_local_height=config["footprint"]["min_local_height"],
+        percentile_slope=config["footprint"]["percentile_slope"],
+        min_size=config["footprint"]["min_size"],
+        max_size=config["footprint"]["max_size"],
+        min_score=config["footprint"]["min_score"],
+        gap=config["footprint"]["gap"],
+        gap_depth=config["footprint"]["gap_depth"],
+        moods_threshold=config["footprint"]["moods_threshold"]
+    shell:
+        """
+        python scripts/footprint_extraction.py --fasta {input.fasta} --bigwig {input.bigwig} --peak_bed {input.bed} --motif {input.motif} --output_dir {output[0]} --extend_region {params.extend_region} --min_local_height {params.min_local_height} --percentile_slope {params.percentile_slope} --min_size {params.min_size} --max_size {params.max_size} --min_score {params.min_score} --gap {params.gap} --gap_depth {params.gap_depth} --moods_threshold {params.moods_threshold} --log_plot {output[4]} &>> {log}
+        """
+
+rule bed_to_fasta:
+    input:
+        config["footprint"]["genome_fasta"],
+        os.path.join(OUTPUTDIR, "1_footprints/1_extraction/new_footprints.bed")
+    output:
+        os.path.join(OUTPUTDIR, "1_footprints/2_fasta/footprint_sites.fasta")
+    conda: "../environments/motif.yml"
+    shell:
+        """
+        bedtools getfasta -name -fi {input[0]} -bed {input[1]} -fo {output}
+        """
