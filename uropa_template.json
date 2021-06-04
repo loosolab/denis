@@ -1,0 +1,27 @@
+{
+    "queries": [
+        {
+            "feature": "LTR",
+            "distance": 100,
+            "internals": "True",
+            "show.attributes": "all"
+        },
+        {
+            "feature": "promoter_proximal",
+            "feature.anchor": "end",
+            "distance": 0,
+            "internals": "True",
+            "show.attributes": "all"
+        },
+        {
+            "feature": "gene",
+            "feature.anchor": "start",
+            "distance": 0,
+            "internals": "True",
+            "show.attributes": "all"
+        }
+    ],
+    "priority": "False",
+    "gtf": "",
+    "bed": ""
+}

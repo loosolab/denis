@@ -1,0 +1,130 @@
+import glob
+import os
+
+def get_control(wildcards):
+    # get control motifs
+    control = glob.glob(os.path.join(checkpoints.footprint_random_motifs.get(**wildcards).output[0], "*.meme"))
+    control += glob.glob(os.path.join(checkpoints.genome_random_motifs.get(**wildcards).output[0], "*.meme"))
+    control += glob.glob(os.path.join(checkpoints.select_known_motifs.get(**wildcards).output[0], "*.meme"))
+    control += glob.glob(os.path.join(checkpoints.shuffle_known_motifs.get(**wildcards).output[0], "*.meme"))
+
+    return control
+
+def get_discovered(wildcards):
+    # get discovered motifs
+    return glob.glob(os.path.join(checkpoints.motif_processing.get(**wildcards).output[0], "motifs/*.meme"))
+
+def get_motifs(wildcards):
+    return get_discovered(wildcards) + get_control(wildcards)
+
+rule motif_evaluation:
+    input:
+        os.path.join(OUTPUTDIR, "2_discovery/2_processed_motif/done.txt"),
+        d_motifs=get_discovered,
+        c_motifs=get_control,
+        db=config["footprint"]["motif_file"]
+    output:
+        heatmap=os.path.join(OUTPUTDIR, "3_evaluation/motif_evaluation/new_vs_db_heatmap.pdf"),
+        lineplot=os.path.join(OUTPUTDIR, "3_evaluation/motif_evaluation/new_vs_db_lineplot.pdf"),
+        boxplot=os.path.join(OUTPUTDIR, "3_evaluation/motif_evaluation/new_vs_db_boxplot.pdf"),
+        json=os.path.join(OUTPUTDIR, "3_evaluation/motif_evaluation/most_similar_motifs.json")
+    conda: "../environments/motif.yml"
+    params:
+        top_x=config["evaluation"]["motif"]["top_x"]
+    script:
+        "../scripts/eval_motifs.py"
+
+rule merge_motif_files:
+    input:
+        get_motifs
+    conda: "../environments/motif.yml"
+    output:
+        os.path.join(OUTPUTDIR, "3_evaluation/motifs.meme")
+    script:
+        "../scripts/merge_motif_files.py"
+
+checkpoint rescan:
+    input:
+        meme=os.path.join(OUTPUTDIR, "3_evaluation/motifs.meme"),
+        genome=config["footprint"]["genome_fasta"]
+    log:
+        os.path.join(OUTPUTDIR, "logs/rescan.log")
+    conda: "../environments/motif.yml"
+    threads: config["evaluation"]["rescan"]["cores"]
+    params:
+        pvalue=config["evaluation"]["rescan"]["pvalue"],
+        split=config["evaluation"]["rescan"]["split"]
+    output:
+        dir=directory(os.path.join(OUTPUTDIR, "3_evaluation/rescan/"))
+    shell:
+        """
+        TOBIAS TFBScan --motifs {input.meme} --fasta {input.genome} --outdir {output.dir} --naming id_name --pvalue {params.pvalue} --cores {threads} --split {params.split} &>> {log}
+        """
+
+def get_names(wildcards):
+    return list(map(lambda x: os.path.basename(os.path.splitext(x)[0]), glob.glob(os.path.join(checkpoints.rescan.get(**wildcards).output[0], "*.bed"))))
+
+def get_rescan_beds(wildcards):
+    return sorted(expand(os.path.join(OUTPUTDIR, "3_evaluation/rescan/{name}.bed"), name=get_names(wildcards)), key=lambda x: os.path.basename(x))
+
+def get_motif_beds(wildcards):
+    names = get_names(wildcards)
+
+    # get control motif beds
+    control = glob.glob(os.path.join(checkpoints.footprint_random_motifs.get(**wildcards).output[0], "*.bed"))
+    control += glob.glob(os.path.join(checkpoints.genome_random_motifs.get(**wildcards).output[0], "*.bed"))
+    
+    # get discovery beds
+    discovered = glob.glob(os.path.join(checkpoints.motif_processing.get(**wildcards).output[0], "motifs", "*.bed"))
+    
+    # get known motif beds
+    used_names = [os.path.basename(os.path.splitext(n)[0]) for n in control + discovered]
+    known_names = [n for n in names if not n in used_names]
+    known = expand(os.path.join(OUTPUTDIR, "3_evaluation/rescan/{name}.bed"), name=known_names)
+    return sorted(discovered + control + known, key=lambda x: os.path.basename(x))
+
+rule rescan_venn:
+    input:
+        rescan_beds=get_rescan_beds,
+        motif_beds=get_motif_beds,
+        peak_bed=config["footprint"]["peak_bed"],
+        genome_file=os.path.join(OUTPUTDIR, "3_evaluation/genome.tsv")
+    params:
+        extend_region=config["footprint"]["extend_region"]
+    output:
+        dir=directory(os.path.join(OUTPUTDIR, "3_evaluation/venn/")),
+        ranks=os.path.join(OUTPUTDIR, "3_evaluation/venn/motif_ranks.tsv")
+    conda: "../environments/motif.yml"
+    script:
+        "../scripts/venn.py"
+
+rule rescan_footprint_overlap:
+    input:
+        lambda w: checkpoints.rescan.get(**w).output[0],
+        rescan_bed=os.path.join(OUTPUTDIR, "3_evaluation/rescan/{motif}.bed"),
+        footprint_bed=os.path.join(OUTPUTDIR, "1_footprints/1_extraction/footprints.bed")
+    output:
+        bed=os.path.join(OUTPUTDIR, "4_annotation/open_binding_sites/{motif}.bed")
+    conda: "../environments/motif.yml"
+    script:
+        "../scripts/rescan_footprint_overlap.py"
+
+rule genome_file:
+    input:
+        genome=config["footprint"]["genome_fasta"]
+    output:
+        genome_file=os.path.join(OUTPUTDIR, "3_evaluation/genome.tsv")
+    conda: "../environments/motif.yml"
+    script:
+        "../scripts/genome_file.py"
+
+rule motif_ranks_table:
+    input:
+        table=os.path.join(OUTPUTDIR, "3_evaluation/venn/motif_ranks.tsv"),
+        motifs=os.path.join(OUTPUTDIR, "3_evaluation/motifs.meme")
+    output:
+        os.path.join(OUTPUTDIR, "3_evaluation/motif_ranks.tsv"),
+        os.path.join(OUTPUTDIR, "3_evaluation/ranks_barplot.pdf")
+    conda: "../environments/motif.yml"
+    script:
+        "../scripts/motif_ranks_table.py"

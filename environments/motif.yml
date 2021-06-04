@@ -1,0 +1,29 @@
+name: motif
+
+channels:
+  - bioconda
+  - conda-forge
+
+dependencies:
+#  - tobias # use when tobias
+  - scipy
+  - pandas
+  - kneed
+  - biopython
+  - seaborn
+  - matplotlib
+  - lxml
+  - numpy>=1.18
+  - meme>=5.3.0
+  - cython # TODO remove when tobias is updated
+  - pip
+  - pip:
+    - git+https://github.com/loosolab/TOBIAS.git@dev # TODO remove when tobias is updated
+    - gimmemotifs
+  - sklearn-contrib-lightning # needed by gimmemotifs
+  - pyarrow # needed by gimmemotifs
+  - bedtools
+  - lmfit
+  - matplotlib-venn
+  - pybedtools
+  - uropa

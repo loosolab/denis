@@ -1,0 +1,127 @@
+import os
+import glob
+
+checkpoint motif_discovery:
+    input:
+        os.path.join(OUTPUTDIR, "1_footprints/2_fasta/footprint_sites.fasta")
+    output:
+        directory(os.path.join(OUTPUTDIR, "2_discovery/1_meme")),
+        os.path.join(OUTPUTDIR, "2_discovery/1_meme/done.txt")
+    log:
+        os.path.join(OUTPUTDIR, "logs/motif_discovery.log"),
+        os.path.join(OUTPUTDIR, "logs/meme.log")
+    conda: "../environments/motif.yml"
+    threads: config["motif"]["discovery"]["threads"]
+    params:
+        retry=config["motif"]["discovery"]["retry"],
+        escape_method=config["motif"]["discovery"]["escape_method"],
+        fit_func=config["motif"]["discovery"]["knee_function"],
+        keep_all=config["motif"]["discovery"]["keep_all"],
+        min_len=config["motif"]["discovery"]["min_len"],
+        max_len=config["motif"]["discovery"]["max_len"],
+        e_value=config["motif"]["discovery"]["e_value"],
+        mod=config["motif"]["discovery"]["mod"],
+        objfun=config["motif"]["discovery"]["objfun"],
+        nmotifs=config["motif"]["discovery"]["nmotifs"],
+        minsites=config["motif"]["discovery"]["minsites"],
+        maxsites=config["motif"]["discovery"]["maxsites"],
+        maxiter=config["motif"]["discovery"]["maxiter"]
+    shell:
+        """
+        parameter="--fasta {input} --output_dir {output[0]} --retry {params.retry} --escape_method {params.escape_method} --fit_func {params.fit_func} --threads {threads} --meme_log {log[1]} --min_len {params.min_len} --max_len {params.max_len} --threshold {params.e_value} --mod {params.mod} --objfun {params.objfun} "
+        parameter+="--nmotifs {params.nmotifs} --minsites {params.minsites} --maxsites {params.maxsites} --maxiter {params.maxiter}"
+        shopt -s nocasematch
+        if [[ "true" =~ "{params.keep_all}" ]]; then
+            parameter+=" --save_discarded"
+        fi
+
+        python scripts/motif_discovery.py $parameter &>> {log[0]}
+        touch {output[1]}
+        """
+
+def get_motifs(wildcards):
+    return glob.glob(os.path.join(checkpoints.motif_discovery.get(**wildcards).output[0], "1_motifs/*.meme"))
+
+checkpoint motif_processing:
+    input:
+        os.path.join(OUTPUTDIR, "2_discovery/1_meme/done.txt"),
+        stats=os.path.join(OUTPUTDIR, "2_discovery/1_meme/motif_stats.tsv"),
+        motifs=get_motifs
+    output:
+        dir=directory(os.path.join(OUTPUTDIR, "2_discovery/2_processed_motif")),
+        stats=os.path.join(OUTPUTDIR, "2_discovery/motif_stats.tsv"),
+        done=os.path.join(OUTPUTDIR, "2_discovery/2_processed_motif/done.txt")
+    conda: "../environments/motif.yml"
+    params:
+        threshold=config["motif"]["processing"]["threshold"],
+        dpi=config["motif"]["processing"]["dpi"]
+    script:
+        "../scripts/motif_processing.py"
+
+def get_stat_matrizes(wildcards):
+    return glob.glob(os.path.join(checkpoints.motif_discovery.get(**wildcards).output[0], "iteration_*/validation/motif_stats.tsv"))
+
+rule merge_stats:
+    input:
+        os.path.join(OUTPUTDIR, "2_discovery/1_meme/done.txt"),
+        stat_files=get_stat_matrizes
+    output:
+        temp(os.path.join(OUTPUTDIR, "2_discovery/1_meme/motif_stats.tsv"))
+    conda: "../environments/motif.yml"
+    script:
+        "../scripts/merge_motif_stats.py"
+
+checkpoint select_known_motifs:
+    input: 
+        config["footprint"]["motif_file"]
+    conda: "../environments/motif.yml"
+    params:
+        quantity=config["motif"]["known"]["quantity"],
+        motifs=config["motif"]["known"]["motifs"]
+    output:
+        directory(os.path.join(OUTPUTDIR, "2_discovery/3_control_motifs/known"))
+    script:
+        "../scripts/known_motifs.py"
+
+# -------------------- random motifs --------------------
+if False:
+    checkpoint footprint_random_motifs:
+        input:
+            os.path.join(OUTPUTDIR, "1_footprints/2_fasta/footprint_sites.fasta")
+        output:
+            directory(os.path.join(OUTPUTDIR, "2_discovery/3_control_motifs/random_footprint"))
+        conda: "../environments/motif.yml"
+        params:
+            quantity = config["motif"]["random"]["footprint"]["quantity"],
+            min_len = config["motif"]["random"]["footprint"]["min_len"],
+            max_len = config["motif"]["random"]["footprint"]["max_len"],
+            percentage = config["motif"]["random"]["footprint"]["percentage"]
+        shell:
+            """
+            python scripts/random_motif.py --fasta {input} --quantity {params.quantity} --min_len {params.min_len} --max_len {params.max_len} --percentage {params.percentage} --output_dir {output} --prefix footprint_motif
+            """
+
+    checkpoint genome_random_motifs:
+        input:
+            config["motif"]["random"]["genome"]["input"]
+        output:
+            directory(os.path.join(OUTPUTDIR, "2_discovery/3_control_motifs/random_genome"))
+        conda: "../environments/motif.yml"
+        params:
+            quantity = config["motif"]["random"]["genome"]["quantity"],
+            min_len = config["motif"]["random"]["genome"]["min_len"],
+            max_len = config["motif"]["random"]["genome"]["max_len"],
+            percentage = config["motif"]["random"]["genome"]["percentage"]
+        shell:
+            """
+            python scripts/random_motif.py --fasta {input} --quantity {params.quantity} --min_len {params.min_len} --max_len {params.max_len} --percentage {params.percentage} --output_dir {output} --prefix genome_motif --multiple
+            """
+
+checkpoint shuffle_known_motifs:
+    input: 
+        lambda w: glob.glob(os.path.join(checkpoints.select_known_motifs.get(**w).output[0], "*.meme"))
+    output:
+        directory(os.path.join(OUTPUTDIR, "2_discovery/3_control_motifs/shuffle_known"))
+    conda: "../environments/motif.yml"
+    script:
+        "../scripts/shuffle_motifs.py"
