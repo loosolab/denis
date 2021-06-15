@@ -13,7 +13,7 @@ Next the configuration file `config.yml` needs to be adjusted for the data. Afte
 ```
 snakemake --configfile [path_to/]config.yml --cores [number of cores] --use-conda 
 ```
-If Mamba is installed the building time of environments can be greatly reduced running this command instead:
+If [Mamba](https://github.com/mamba-org/mamba) is installed the building time of environments can be greatly reduced running this command instead:
 ```
 snakemake --configfile [path_to/]config.yml --cores [number of cores] --use-conda --conda-frontend mamba
 ```
