@@ -7,7 +7,7 @@ channels:
 dependencies:
 #  - tobias # use when tobias
   - scipy
-  - pandas
+  - pandas=1.2.5 # https://github.com/vanheeringen-lab/gimmemotifs/issues/168  TODO remove version when issue is resolved.
   - kneed
   - biopython
   - seaborn
