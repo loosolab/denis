@@ -3,9 +3,9 @@ import os
 
 def get_control(wildcards):
     # get control motifs
-    control = glob.glob(os.path.join(checkpoints.footprint_random_motifs.get(**wildcards).output[0], "*.meme"))
-    control += glob.glob(os.path.join(checkpoints.genome_random_motifs.get(**wildcards).output[0], "*.meme"))
-    control += glob.glob(os.path.join(checkpoints.select_known_motifs.get(**wildcards).output[0], "*.meme"))
+    #control = glob.glob(os.path.join(checkpoints.footprint_random_motifs.get(**wildcards).output[0], "*.meme"))
+    #control += glob.glob(os.path.join(checkpoints.genome_random_motifs.get(**wildcards).output[0], "*.meme"))
+    control = glob.glob(os.path.join(checkpoints.select_known_motifs.get(**wildcards).output[0], "*.meme"))
     control += glob.glob(os.path.join(checkpoints.shuffle_known_motifs.get(**wildcards).output[0], "*.meme"))
 
     return control
@@ -71,17 +71,17 @@ def get_motif_beds(wildcards):
     names = get_names(wildcards)
 
     # get control motif beds
-    control = glob.glob(os.path.join(checkpoints.footprint_random_motifs.get(**wildcards).output[0], "*.bed"))
-    control += glob.glob(os.path.join(checkpoints.genome_random_motifs.get(**wildcards).output[0], "*.bed"))
+    #control = glob.glob(os.path.join(checkpoints.footprint_random_motifs.get(**wildcards).output[0], "*.bed"))
+    #control += glob.glob(os.path.join(checkpoints.genome_random_motifs.get(**wildcards).output[0], "*.bed"))
     
     # get discovery beds
     discovered = glob.glob(os.path.join(checkpoints.motif_processing.get(**wildcards).output[0], "motifs", "*.bed"))
     
     # get known motif beds
-    used_names = [os.path.basename(os.path.splitext(n)[0]) for n in control + discovered]
+    used_names = [os.path.basename(os.path.splitext(n)[0]) for n in discovered] # control + 
     known_names = [n for n in names if not n in used_names]
     known = expand(os.path.join(OUTPUTDIR, "3_evaluation/rescan/{name}.bed"), name=known_names)
-    return sorted(discovered + control + known, key=lambda x: os.path.basename(x))
+    return sorted(discovered + known, key=lambda x: os.path.basename(x)) # + control 
 
 rule rescan_venn:
     input:
