@@ -43,6 +43,15 @@ rule merge_motif_files:
     script:
         "../scripts/merge_motif_files.py"
 
+rule filafy_motif_names:
+    input:
+        os.path.join(OUTPUTDIR, "3_evaluation/motifs.meme")
+    conda: "../environments/motif.yml"
+    output:
+        temp(os.path.join(OUTPUTDIR, "3_evaluation/motif_names.tsv"))
+    script:
+        "../scripts/filafy_motif_names.py"
+
 checkpoint rescan:
     input:
         meme=os.path.join(OUTPUTDIR, "3_evaluation/motifs.meme"),
@@ -88,7 +97,8 @@ rule rescan_venn:
         rescan_beds=get_rescan_beds,
         motif_beds=get_motif_beds,
         peak_bed=config["footprint"]["peak_bed"],
-        genome_file=os.path.join(OUTPUTDIR, "3_evaluation/genome.tsv")
+        genome_file=os.path.join(OUTPUTDIR, "3_evaluation/genome.tsv"),
+        motif_names=os.path.join(OUTPUTDIR, "3_evaluation/motif_names.tsv")
     params:
         extend_region=config["footprint"]["extend_region"]
     output:

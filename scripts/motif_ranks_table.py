@@ -25,7 +25,7 @@ for m in motifs:
     motif_dict.setdefault("information_content", []).append(m.ic)
 
 motif_table = pd.DataFrame(motif_dict)
-motif_table["merge_col"] = motif_table["id"] + "_" + motif_table["name"]
+motif_table["merge_col"] = motif_table["id"]
 
 # load rank table
 ranks = pd.read_csv(snakemake.input.table, sep="\t")

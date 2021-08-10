@@ -66,6 +66,9 @@ peaks = pybedtools.BedTool(snakemake.input.peak_bed)
 peaks = peaks.slop(g=snakemake.input.genome_file, b=snakemake.params.extend_region)
 peaks = peaks.sort()
 
+# load and prepare motif name table
+motif_names = pd.read_csv(snakemake.input.motif_names, sep="\t")
+
 # motif overview table
 overview = {}
 
@@ -77,7 +80,10 @@ for rescan_bed, motif_bed in zip(snakemake.input.rescan_beds, snakemake.input.mo
     rescan = pybedtools.BedTool(rescan_bed)
     footprints = pybedtools.BedTool(motif_bed)
 
-    name = os.path.basename(os.path.splitext(rescan_bed)[0])
+    filename = os.path.basename(os.path.splitext(rescan_bed)[0])
+    name = motif_names.loc[motif_names["filafy_id_name"] == filename, ["id", "name"]].values[0]
+    id = name[0]
+    full_name = name[0] + " " + name[1]
     
     # sort beds
     rescan = rescan.sort()
@@ -108,11 +114,11 @@ for rescan_bed, motif_bed in zip(snakemake.input.rescan_beds, snakemake.input.mo
     ##### plotting #####
     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(17, 10), tight_layout={'rect': (0, 0, 1, 0.95)})
     axs = axs.flatten()
-    fig.suptitle(f"{name} binding site scan", fontsize=16)
+    fig.suptitle(f"{full_name} binding site scan", fontsize=16)
     
     ## venn ##
-    plot_name = ["Rescan", "Original Sites", "Peak"]
-    tick_names = ["Original Sites", "Peak", "Rescan"]
+    plot_name = ["Rescan", "Original Sites", "Open Chromatin"]
+    tick_names = ["Original Sites", "Open Chromatin", "Rescan"]
     for i, data in enumerate([rescan_overlap, footprint_overlap, peak_overlap]):
         # skip original site venn if there are no original sites
         if i == 1 and rescan_bed == motif_bed:
@@ -149,7 +155,7 @@ for rescan_bed, motif_bed in zip(snakemake.input.rescan_beds, snakemake.input.mo
 
     ## barplot ##
     # enrichment scores
-    enrichment = pd.DataFrame({"Label": ["Genome vs Rescan", "Peaks vs Peak-Rescan"], 
+    enrichment = pd.DataFrame({"Label": ["Genome Enrichment", "Open Chromatin Enrichment"], 
                                "Enrichment": [rescan.total_coverage() / genome_len * 100 ,
                                (rescan_overlap['011'].total_coverage() + rescan_overlap['111'].total_coverage()) / peaks.total_coverage() * 100]})
     
@@ -157,11 +163,11 @@ for rescan_bed, motif_bed in zip(snakemake.input.rescan_beds, snakemake.input.mo
     axs[3].set_xlabel('')
     axs[3].set_ylabel('Basepair Ratio [%]')
     
-    plt.savefig(os.path.join(snakemake.output.dir, name + ".pdf"))
+    plt.savefig(os.path.join(snakemake.output.dir, filename + ".pdf"))
     plt.close()
     
     # add to overview table
-    overview.setdefault("id", []).append(name)
+    overview.setdefault("id", []).append(id)
     overview.setdefault("enrichment_score", []).append(np.log2(enrichment.loc[1, "Enrichment"] / enrichment.loc[0, "Enrichment"]))
 
 # convert to table and write
