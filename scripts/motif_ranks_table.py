@@ -20,7 +20,6 @@ for m in motifs:
     motif_dict.setdefault("id", []).append(m.id)
     motif_dict.setdefault("name", []).append(m.name)
     motif_dict.setdefault("GC%", []).append(m.gc)
-    motif_dict.setdefault("nsites", []).append(int(m.info['nsites']))
     motif_dict.setdefault("width", []).append(int(m.info['w']))
     motif_dict.setdefault("information_content", []).append(m.ic)
 

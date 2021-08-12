@@ -169,6 +169,8 @@ for rescan_bed, motif_bed in zip(snakemake.input.rescan_beds, snakemake.input.mo
     # add to overview table
     overview.setdefault("id", []).append(id)
     overview.setdefault("enrichment_score", []).append(np.log2(enrichment.loc[1, "Enrichment"] / enrichment.loc[0, "Enrichment"]))
+    overview.setdefault("nsites_whole_genome", []).append(len(rescan))
+    overview.setdefault("nsites_open_chromatin", []).append(rescan.intersect(peaks, wa=True, u=True).count())
 
 # convert to table and write
 overview = pd.DataFrame(overview).sort_values(by="enrichment_score", ascending=False)
