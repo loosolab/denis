@@ -50,7 +50,9 @@ if config['annotation']['gtf']:
     rule feature_enrichment:
         input:
             hits_tables=get_hits,
-            ranks_table=os.path.join(OUTPUTDIR, "3_evaluation/motif_ranks.tsv")
+            bed_tables_path=os.path.join(OUTPUTDIR, "4_annotation/open_binding_sites/"),
+            ranks_table=os.path.join(OUTPUTDIR, "3_evaluation/motif_ranks.tsv"),
+            motif_names=os.path.join(OUTPUTDIR, "3_evaluation/motif_names.tsv")
         conda: "../environments/motif.yml"
         output:
             plot=os.path.join(OUTPUTDIR, "4_annotation/feature_enrichment_plot.pdf"),
