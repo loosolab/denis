@@ -47,10 +47,13 @@ if config['annotation']['gtf']:
     def get_hits(w):
         return [glob.glob(checkpoints.uropa_annotate_motifs.get(**{"motif": m}).output[0] + "*allhits.txt")[0] for m in get_names(w) if re.match(f"^{MOTIF_CONSTRAINT}$", m)]
 
+    def get_beds(w):
+        return [glob.glob(checkpoints.rescan_footprint_overlap.get(**{"motif": m}).output[0])[0] for m in get_names(w) if re.match(f"^{MOTIF_CONSTRAINT}$", m)]
+
     rule feature_enrichment:
         input:
             hits_tables=get_hits,
-            bed_tables_path=os.path.join(OUTPUTDIR, "4_annotation/open_binding_sites/"),
+            bed_tables=get_beds,
             ranks_table=os.path.join(OUTPUTDIR, "3_evaluation/motif_ranks.tsv"),
             motif_names=os.path.join(OUTPUTDIR, "3_evaluation/motif_names.tsv")
         conda: "../environments/motif.yml"

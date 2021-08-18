@@ -7,6 +7,7 @@ import glob
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import warnings
 
 # load naming table
 name_table = pd.read_csv(snakemake.input.motif_names, sep="\t")
@@ -14,13 +15,14 @@ name_table = pd.read_csv(snakemake.input.motif_names, sep="\t")
 # construct feature table
 feature_table = pd.DataFrame(columns=["motif", "feature", "enrichment"])
 
-for f_table in snakemake.input.hits_tables:
+for f_table, bedfile in zip(snakemake.input.hits_tables, snakemake.input.bed_tables):
+    if not os.path.basename(os.path.dirname(f_table)) == os.path.splitext(os.path.basename(bedfile))[0]:
+        warnings.warn(f"Filenames {os.path.basename(f_table)} and {os.path.basename(bedfile)} don't match.", Warning)
+    
     hits = pd.read_csv(f_table, sep="\t")
+    bed = pd.read_csv(bedfile, sep="\t", header=None)
     
-    filename = hits.loc[0, "peak_id"]
-    motif_name = name_table.loc[name_table["filafy_id_name"] == filename, "id_name"].values[0]
-    
-    bed = pd.read_csv(os.path.join(snakemake.input.bed_tables_path, f"{filename}.bed"), sep="\t", header=None)
+    motif_name = name_table.loc[name_table["filafy_id_name"] == hits.loc[0, "peak_id"], "id_name"].values[0]
     
     # compute enrichment
     # compute unique_peaks as a peak can be annotated multiple times
@@ -34,9 +36,6 @@ for f_table in snakemake.input.hits_tables:
 
 # set feature NaN to 'Other'
 feature_table.loc[feature_table["feature"].isnull(), "feature"] = "Other"
-
-# sort
-feature_table.sort_values(by=["feature", "enrichment"], inplace=True)
 
 # add enrichment to ranks table
 ranks_table = pd.read_csv(snakemake.input.ranks_table, sep="\t")
@@ -54,11 +53,17 @@ wide_features.fillna(0, inplace=True)
 ranks_table = ranks_table.merge(wide_features, how="left", left_on="tmp_id", right_on="motif")
 ranks_table.drop(["tmp_id", "motif"], axis=1, inplace=True)
 
+# sort
+ranks_table.sort_values(by=["nsites_bound"], ascending=False, inplace=True)
+
 # save table
 ranks_table.to_csv(snakemake.output.table, sep="\t", index=False)
 
 # melt table (wide to long format) for plotting
 feature_table = ranks_table.melt(id_vars=["id", "name", "GC%", "nsites_whole_genome", "nsites_open_chromatin", "nsites_bound", "width", "information_content", "enrichment_score"], var_name="feature", value_name="feature_enrichment")
+
+# sort
+feature_table.sort_values(by=["nsites_bound", "id"], ascending=False, inplace=True)
 
 # plot
 plt.figure(figsize=(len(snakemake.input.hits_tables) * 0.25, 10))
@@ -66,16 +71,15 @@ plt.figure(figsize=(len(snakemake.input.hits_tables) * 0.25, 10))
 # use seaborn theme (enable gridlines)
 sns.set_theme()
 
-xaxis = "name"
 plot = sns.scatterplot(data=feature_table,
-                       x=xaxis,
+                       x="name",
                        y="feature_enrichment",
                        hue="feature",
                        size="nsites_bound"
 )
 
-# https://stackoverflow.com/questions/66700765/how-to-rotate-x-axis-tick-lables-in-seaborn-scatterplot-using-subplots
-plot.set_xticklabels(feature_table[xaxis].to_list(), rotation=90)
+# rotate xaxis ticks so they don't overlap
+plt.xticks(rotation=90)
 # force x-gridlines
 plot.xaxis.grid(True)
 

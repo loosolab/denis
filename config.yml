@@ -70,6 +70,8 @@ motif:
   ### control motifs ###
   # select known motifs to compare against
   known:
+    # Whether to shuffle known motifs as additional control group
+    shuffle: False
     # Number of known motifs to be selected as control
     # chosen to have a high distance from each other
     quantity: 15 

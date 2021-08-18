@@ -6,7 +6,8 @@ def get_control(wildcards):
     #control = glob.glob(os.path.join(checkpoints.footprint_random_motifs.get(**wildcards).output[0], "*.meme"))
     #control += glob.glob(os.path.join(checkpoints.genome_random_motifs.get(**wildcards).output[0], "*.meme"))
     control = glob.glob(os.path.join(checkpoints.select_known_motifs.get(**wildcards).output[0], "*.meme"))
-    control += glob.glob(os.path.join(checkpoints.shuffle_known_motifs.get(**wildcards).output[0], "*.meme"))
+    if config["motif"]["known"]["shuffle"]:
+        control += glob.glob(os.path.join(checkpoints.shuffle_known_motifs.get(**wildcards).output[0], "*.meme"))
 
     return control
 
@@ -108,7 +109,7 @@ rule rescan_venn:
     script:
         "../scripts/venn.py"
 
-rule rescan_footprint_overlap:
+checkpoint rescan_footprint_overlap:
     input:
         lambda w: checkpoints.rescan.get(**w).output[0],
         rescan_bed=os.path.join(OUTPUTDIR, "3_evaluation/rescan/{motif}.bed"),
