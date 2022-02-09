@@ -305,8 +305,12 @@ def footprint_extraction(fasta, bigwig, peak_bed, motif, output_dir, extend_regi
     bed.sort_values([0,1,2], inplace=True) # probably already sorted but just to be safe
     
     # extend regions and merge overlapping peaks
-    bed[1] = bed[1] - extend_region
-    bed[2] = bed[2] + extend_region
+    def extend_row(r):
+        r[1] = r[1] - extend_region if r[1] - 100 >= 0 else 0
+        r[2] = r[2] + extend_region if r[2] + 100 <= bigwig.chroms(r[0]) else bigwig.chroms(r[0])
+        return r
+
+    bed = bed.apply(extend_row, axis=1)
     tmp_bed = {'chr': [], 'start': [], 'end': []}
     for chr in list(dict.fromkeys(bed[0])): # make unique chr list while perserving the order
         chr_subset = bed[bed[0] == chr]
