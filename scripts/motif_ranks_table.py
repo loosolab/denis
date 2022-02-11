@@ -2,6 +2,7 @@
 import matplotlib
 matplotlib.use('Agg')
 
+import numpy as np
 import pandas as pd
 from tobias.utils.motifs import MotifList
 import seaborn as sns
@@ -22,6 +23,7 @@ for m in motifs:
     motif_dict.setdefault("GC%", []).append(m.gc)
     motif_dict.setdefault("width", []).append(int(m.info['w']))
     motif_dict.setdefault("information_content", []).append(m.ic)
+    motif_dict.setdefault("nsites_footprint", []).append(m.n if "motif_" in m.id else np.nan)
 
 motif_table = pd.DataFrame(motif_dict)
 motif_table["merge_col"] = motif_table["id"]
