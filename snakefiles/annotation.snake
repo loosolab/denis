@@ -28,7 +28,8 @@ if config['annotation']['gtf']:
         input: 
             config=os.path.join(OUTPUTDIR, "4_annotation/uropa/config/uropa_config_{motif}.json")
         conda: "../environments/motif.yml"
-        #params:
+        params:
+            flags=config['annotation']['flags']
         threads: config['annotation']['threads']
         log:
             os.path.join(OUTPUTDIR, "logs/uropa/{motif}.log")
@@ -38,7 +39,7 @@ if config['annotation']['gtf']:
             motif=MOTIF_CONSTRAINT
         shell: 
             """
-            uropa --input {input.config} --outdir {output.dir} --threads {threads} --log {log} &> /dev/null
+            uropa --input {input.config} --outdir {output.dir} --threads {threads} --log {log} {params.flags} &> /dev/null
             """
 
     def get_names(wildcards):
