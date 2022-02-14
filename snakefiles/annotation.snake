@@ -45,10 +45,16 @@ if config['annotation']['gtf']:
         return list(map(lambda x: os.path.basename(os.path.splitext(x)[0]), glob.glob(os.path.join(checkpoints.rescan.get(**wildcards).output[0], "*.bed"))))
 
     def get_hits(w):
-        return [glob.glob(checkpoints.uropa_annotate_motifs.get(**{"motif": m}).output[0] + "*allhits.txt")[0] for m in get_names(w) if re.match(f"^{MOTIF_CONSTRAINT}$", m)]
+        hit_files = []
+        for m in [m for m in get_names(w) if re.match(f"^{MOTIF_CONSTRAINT}$", m)]:
+            hit_files.append(glob.glob(checkpoints.uropa_annotate_motifs.get(**{"motif": m}).output[0] + "/*allhits.txt")[0])
+        return hit_files
 
     def get_beds(w):
-        return [glob.glob(checkpoints.rescan_footprint_overlap.get(**{"motif": m}).output[0])[0] for m in get_names(w) if re.match(f"^{MOTIF_CONSTRAINT}$", m)]
+        bed_files = []
+        for m in [m for m in get_names(w) if re.match(f"^{MOTIF_CONSTRAINT}$", m)]:
+            bed_files.append(glob.glob(checkpoints.rescan_footprint_overlap.get(**{"motif": m}).output[0])[0])
+        return bed_files
 
     rule feature_enrichment:
         input:
