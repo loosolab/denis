@@ -107,3 +107,5 @@ annotation:
   #  all = '.+' (or leave empty)
   annotate: ['.+']
   threads: 15
+  # Additional UROPA parameters (space separated). See https://uropa-manual.readthedocs.io/output.html
+  flags: ""

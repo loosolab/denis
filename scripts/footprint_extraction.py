@@ -268,8 +268,16 @@ def plot_stats(peaks, footprints, new_footprints, output='statistics.pdf'):
                 y=["Peaks", "Footprints", "New footprints"],
                 ax=axs[2][0])
     
-    fig.delaxes(axs[2,1])
-    # Add another plot here. There is one empty position.
+    # footprint binding score distribution plot
+    axs[2][1].set_title('Binding score distribution')
+    
+    peaks["Origin"] = "Peak"
+    footprints["Origin"] = "Footprint"
+    new_footprints["Origin"] = "New Footprint"
+    score_table = pd.concat([peaks, footprints, new_footprints], ignore_index=True)
+    # sns.histplot(data=score_table, x="score", hue="Origin", ax=axs[2][1], kde=True)
+    # sns.ecdfplot(data=score_table, x="score", hue="Origin", ax=axs[2][1])
+    sns.boxplot(data=score_table, x="score", y="Origin", ax=axs[2][1])
     
     fig.savefig(output)
     plt.close()
@@ -305,8 +313,12 @@ def footprint_extraction(fasta, bigwig, peak_bed, motif, output_dir, extend_regi
     bed.sort_values([0,1,2], inplace=True) # probably already sorted but just to be safe
     
     # extend regions and merge overlapping peaks
-    bed[1] = bed[1] - extend_region
-    bed[2] = bed[2] + extend_region
+    def extend_row(r):
+        r[1] = r[1] - extend_region if r[1] - 100 >= 0 else 0
+        r[2] = r[2] + extend_region if r[2] + 100 <= bigwig.chroms(r[0]) else bigwig.chroms(r[0])
+        return r
+
+    bed = bed.apply(extend_row, axis=1)
     tmp_bed = {'chr': [], 'start': [], 'end': []}
     for chr in list(dict.fromkeys(bed[0])): # make unique chr list while perserving the order
         chr_subset = bed[bed[0] == chr]
@@ -333,9 +345,9 @@ def footprint_extraction(fasta, bigwig, peak_bed, motif, output_dir, extend_regi
     ##### Footprint extraction #####
     plots = list()
 
-    footprint_bed = {'chr': [], 'start': [], 'end': [], 'score': [], 'motif_length': []}
+    footprint_bed = {'chr': [], 'start': [], 'end': [], 'name': [], 'score': [], 'motif_length': []}
     motif_bed = {'chr': [], 'start': [], 'end': []}
-    new_footprint_bed = {'chr': [], 'start': [], 'end': [], 'score': []}
+    new_footprint_bed = {'chr': [], 'start': [], 'end': [], 'name': [], 'score': []}
 
     for index in range(len(bed)):
         ##### find footprints #####
@@ -428,6 +440,7 @@ def footprint_extraction(fasta, bigwig, peak_bed, motif, output_dir, extend_regi
             footprint_bed['end'].append(f_end)
             footprint_bed['motif_length'].append(np.sum([r - l for l, r in zip(motif_left, motif_right)]))
             footprint_bed['score'].append(footprint_score)
+            footprint_bed['name'].append("footprint")
             
             # remove motif sites from footprints
             new_footprint_left, new_footprint_right = subtract_footprint(start=f_start,
@@ -441,6 +454,7 @@ def footprint_extraction(fasta, bigwig, peak_bed, motif, output_dir, extend_regi
             new_footprint_bed['end'].extend(new_footprint_right)
             new_footprint_bed['score'].extend([np.mean(scores[l - start:r + 1 - start]) 
                                             for l, r in zip(new_footprint_left, new_footprint_right)])
+            new_footprint_bed['name'] += ["new_footprint"] * len(new_footprint_left)
             
             accepted_fp += 1
             accepted_mo += len(motif_left)
@@ -470,7 +484,7 @@ def footprint_extraction(fasta, bigwig, peak_bed, motif, output_dir, extend_regi
 
     ##### create table and save as bed #####
     footprint_bed = pd.DataFrame(footprint_bed)
-    footprint_bed.iloc[:, 0:3].to_csv(os.path.join(output_dir, "footprints.bed"), index=False, header=False, sep="\t")
+    footprint_bed.iloc[:, 0:5].to_csv(os.path.join(output_dir, "footprints.bed"), index=False, header=False, sep="\t")
 
     motif_bed = pd.DataFrame(motif_bed)
     motif_bed.to_csv(os.path.join(output_dir, "motifs.bed"), index=False, header=False, sep="\t")
@@ -478,7 +492,7 @@ def footprint_extraction(fasta, bigwig, peak_bed, motif, output_dir, extend_regi
     new_footprint_bed = pd.DataFrame(new_footprint_bed)
     # remove footprints below min_size
     new_footprint_bed.drop(new_footprint_bed[new_footprint_bed["end"] - new_footprint_bed["start"] < min_size].index, inplace=True)
-    new_footprint_bed.iloc[:, 0:3].to_csv(os.path.join(output_dir, "new_footprints.bed"), index=False, header=False, sep="\t")
+    new_footprint_bed.iloc[:, 0:5].to_csv(os.path.join(output_dir, "new_footprints.bed"), index=False, header=False, sep="\t")
         
     if plot_fp:
         with PdfPages(os.path.join(output_dir, "footprints.pdf")) as pdf:
