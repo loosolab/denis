@@ -362,7 +362,7 @@ def footprint_extraction(fasta,
     output_dir : str,
         Where the output files should be saved.
     motif : str, default None
-        Motif file, contains motifs that the footprints are filtered against.
+        Motif file, contains motifs that the footprints are filtered against. If None output files footprint.bed and new_footprint.bed contain the same data.
     extend_region : int, default 100
         Value to extend peak region on both sites.
     min_local_height : float, default 0.05
@@ -616,7 +616,7 @@ if __name__ == "__main__":
     required.add_argument('-p', '--peak_bed', required=True, help='Input bed file containing the peaks in which footprints will be searched.')
     required.add_argument('-o', '--output_dir', required=True, help='Path to the output directory.')
 
-    optional.add_argument('-m', '--motif', help='Input motif file.', default=None, type=lambda x: None if x == "None" else x)
+    optional.add_argument('-m', '--motif', help='Input motif file. If not provided footprint.bed and new_footprint.bed will contain the same data.', default=None, type=lambda x: None if x == "None" else x)
     optional.add_argument('-e', '--extend_region', default=100, type=int, help='Extend peaks on both sites by given number of bases.')
     optional.add_argument('-l', '--min_local_height', default=0.05, type=float, help='Percentage of the maximum footprints height.')
     optional.add_argument('-s', '--percentile_slope', default=35, type=int, help='Accepted slope range beginning from 50%% Quantile. E.g. for 35 all slopes between the 15%% and 85%% quantile will be accepted.')
