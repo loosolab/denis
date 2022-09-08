@@ -1,6 +1,7 @@
 rule prepare_bigwig:
     input: config["footprint"]["score_bigwig"]
     output: os.path.join(OUTPUTDIR, "1_footprints/bigwig/binding_scores.bw")
+    conda: "../environments/bigwig.yml"
     message: "Preparing bigwig file(s)."
     run:
         if isinstance(input, list):

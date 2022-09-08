@@ -1,0 +1,11 @@
+name: bigwig
+
+channels:
+  - bioconda
+  - conda-forge
+
+dependencies:
+  - pybigwig
+  - tqdm
+  - pandas
+  - numpy
