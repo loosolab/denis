@@ -1,7 +1,23 @@
+rule prepare_bigwig:
+    input: config["footprint"]["score_bigwig"]
+    output: os.path.join(OUTPUTDIR, "1_footprints/bigwig/binding_scores.bw")
+    message: "Preparing bigwig file(s)."
+    run:
+        if isinstance(input, list):
+            # combine score bigwigs to differential score
+            from ..scripts.diff_bigwig import differential_bigwig
+
+            differential_bigwig(input[0], input[1], output)
+        else:
+            # copy bigwig for further processing
+            import shutil
+
+            shutil.copy(input, output)
+
 rule footprint_extraction:
     input:
         fasta=config["footprint"]["genome_fasta"],
-        bigwig=config["footprint"]["score_bigwig"],
+        bigwig=prepare_bigwig.output,
         bed=config["footprint"]["peak_bed"],
         motif=config["footprint"]["motif_file"]
     output:
