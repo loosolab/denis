@@ -2,23 +2,14 @@ rule prepare_bigwig:
     input: config["footprint"]["score_bigwig"]
     output: os.path.join(OUTPUTDIR, "1_footprints/bigwig/binding_scores.bw")
     conda: "../environments/bigwig.yml"
-    message: "Preparing bigwig file(s)."
-    run:
-        if isinstance(input, list):
-            # combine score bigwigs to differential score
-            from ..scripts.diff_bigwig import differential_bigwig
-
-            differential_bigwig(input[0], input[1], output)
-        else:
-            # copy bigwig for further processing
-            import shutil
-
-            shutil.copy(input, output)
+    message: "Preparing bigwig file."
+    script:
+        "../scripts/diff_bigwig.py"
 
 rule footprint_extraction:
     input:
         fasta=config["footprint"]["genome_fasta"],
-        bigwig=prepare_bigwig.output,
+        bigwig=rules.prepare_bigwig.output,
         bed=config["footprint"]["peak_bed"],
         motif=config["footprint"]["motif_file"]
     output:

@@ -57,3 +57,15 @@ def differential_bigwig(input1, input2, output):
     minuend.close()
     subtrahend.close()
     difference.close()
+
+if __name__ == "__main__":
+    #import pdb; pdb.set_trace() # uncomment for interactive debugging
+
+    if len(snakemake.input) > 1:
+        # combine score bigwigs to differential score
+        differential_bigwig(snakemake.input[0], snakemake.input[1], snakemake.output[0])
+    else:
+        # copy bigwig for further processing
+        import shutil
+
+        shutil.copy(snakemake.input[0], snakemake.output[0])
