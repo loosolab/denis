@@ -409,16 +409,22 @@ def footprint_extraction(fasta,
         tmp_bed['chr'] += [chr] * len(chr_start)
         tmp_bed['start'] += chr_start
         tmp_bed['end'] += chr_end
+
     bed = pd.DataFrame(tmp_bed)
 
-    # load & setup motifs
-    motifs = MotifList().from_file(motif)
-    # setup scanner
-    for motif in motifs:
-        motif.get_threshold(moods_threshold)
-        motif.set_prefix()   
+    # add name & score column
+    bed["name"] = "peak"
+    bed["score"] = bed.apply(lambda x, bigwig: np.nansum(bigwig.values(x['chr'], x['start'], x['end'])), axis=1, bigwig=bigwig)
 
-    motifs.setup_moods_scanner(".")
+    # load & setup motifs
+    if motif:
+        motifs = MotifList().from_file(motif)
+        # setup scanner
+        for motif in motifs:
+            motif.get_threshold(moods_threshold)
+            motif.set_prefix()   
+
+        motifs.setup_moods_scanner(".")
 
     # load genome
     with open(fasta) as fasta:
@@ -505,8 +511,11 @@ def footprint_extraction(fasta,
             sequence = str(fasta_records[f_chr][f_start:f_end].seq)
 
             # scan for motifs, sort and merge hits
-            current_hits = motifs.scan_sequence(sequence, OneRegion([f_chr, f_start, f_end]))
-            current_hits = sorted(current_hits, key=lambda hit: (hit[1], hit[2]))
+            if motif:
+                current_hits = motifs.scan_sequence(sequence, OneRegion([f_chr, f_start, f_end]))
+                current_hits = sorted(current_hits, key=lambda hit: (hit[1], hit[2]))
+            else:
+                current_hits = []
 
             # merge overlapping motif sites
             motif_left, motif_right = merge_peaks([e[1] for e in current_hits], [e[2] for e in current_hits])
