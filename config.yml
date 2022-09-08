@@ -4,6 +4,8 @@ run_params:
 footprint:
   ##### MANDATORY INPUT FILES #####
   genome_fasta: ''
+  # Optional: Provide a list of two files for differential scoring. E.g.: ["path/to/bigwig1.bw", "path/to/bigwig2.bw"]
+  #           Will get peaks unique to the first file.
   score_bigwig: ''
   peak_bed: ''
   motif_file: ''
