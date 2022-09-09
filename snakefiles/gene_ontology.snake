@@ -1,0 +1,24 @@
+
+go_folder = "5_gene_ontology"
+
+rule download_go_associations:
+    input:
+        obo="http://purl.obolibrary.org/obo/go.obo",
+        gene2go="https://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2go.gz",
+        gene2ensembl="https://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2ensembl.gz"
+    output:
+        obo=os.path.join(OUTPUTDIR, go_folder, "data/go-basic.obo"), # contains graph of go-term associations
+        gene2go=os.path.join(OUTPUTDIR, go_folder, "data/gene2go") # contains gene to go-term mapping
+        gene2ensembl=os.path.join(OUTPUTDIR, go_folder, "data/gene2ensembl") # contains Entrez GeneID to Ensembl gene-id mapping
+    script:
+        "download_go_associations.py"
+
+# rule go_enrichment_analysis:
+#     input: 
+#     output: 
+#     script:
+
+# rule plot_go_tree:
+#     input:
+#     output:
+#     script:

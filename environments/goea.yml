@@ -1,0 +1,8 @@
+name: GOEA
+
+channels:
+  - bioconda
+  - conda-forge
+
+dependencies:
+  - goatools
