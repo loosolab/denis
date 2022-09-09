@@ -18,7 +18,8 @@ output_files = ["2_discovery/2_processed_motif/done.txt",
                 "3_evaluation/motif_evaluation/new_vs_db_boxplot.pdf",
                 "3_evaluation/motif_evaluation/most_similar_motifs.json",
                 "3_evaluation/motif_ranks.tsv",
-                "3_evaluation/ranks_barplot.pdf"]
+                "3_evaluation/ranks_barplot.pdf",
+                "config.yml"]
 
 if config['annotation']['gtf']:
     output_files.append("4_annotation/feature_enrichment_plot.pdf")
@@ -34,6 +35,7 @@ include: 'snakefiles/footprint.snake'
 include: 'snakefiles/motif.snake'
 include: 'snakefiles/evaluation.snake'
 include: 'snakefiles/annotation.snake'
+include: 'snakefiles/helpers.snake'
 
 rule all:
     input:
