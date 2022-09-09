@@ -27,14 +27,14 @@ def unpack_file(file_in, file_out):
             shutil.copyfileobj(f_in, f_out)
 
 if __name__ == "__main__":
-    import pdb; pdb.set_trace() # uncomment for interactive debugging
+    # import pdb; pdb.set_trace() # uncomment for interactive debugging
 
-    for key in snakemake.input.keys():
-        url = snakemake.input[key]
+    for key in snakemake.params.keys():
+        url = snakemake.params[key]
 
         file = download_file(url)
 
         if file.endswith(".gz"):
             unpack_file(file, snakemake.output[key])
         else:
-            shutil.copyfileobj(file, snakemake.output[key])
+            shutil.copyfile(file, snakemake.output[key])

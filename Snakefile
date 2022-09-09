@@ -11,7 +11,7 @@ config: 'config.yml'
 
 OUTPUTDIR = config['run_params']['output']
 
-output_files = ["config.yml"
+output_files = ["config.yml",
                 "2_discovery/2_processed_motif/done.txt",
                 "2_discovery/motif_stats.tsv",
                 "3_evaluation/motif_evaluation/new_vs_db_heatmap.pdf",
