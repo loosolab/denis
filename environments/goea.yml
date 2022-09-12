@@ -6,3 +6,5 @@ channels:
 
 dependencies:
   - goatools
+  - biopython>=1.79 # fixes import Bio not found
+  - pandas
