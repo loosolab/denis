@@ -10,8 +10,7 @@ rule footprint_extraction:
     input:
         fasta=config["footprint"]["genome_fasta"],
         bigwig=rules.prepare_bigwig.output,
-        bed=config["footprint"]["peak_bed"],
-        motif=config["footprint"]["motif_file"]
+        bed=config["footprint"]["peak_bed"]
     output:
         directory(os.path.join(OUTPUTDIR, "1_footprints/1_extraction")),
         os.path.join(OUTPUTDIR, "1_footprints/1_extraction/footprints.bed"),
@@ -22,6 +21,7 @@ rule footprint_extraction:
         os.path.join(OUTPUTDIR, "logs/footprint_extraction.log")
     conda: "../environments/motif.yml"
     params:
+        motif=config["footprint"]["motif_file"] if config["footprint"]["motif_file"] else None, # optional motif file
         extend_region=config["footprint"]["extend_region"],
         min_local_height=config["footprint"]["min_local_height"],
         percentile_slope=config["footprint"]["percentile_slope"],
@@ -33,7 +33,7 @@ rule footprint_extraction:
         moods_threshold=config["footprint"]["moods_threshold"]
     shell:
         """
-        python scripts/footprint_extraction.py --fasta {input.fasta} --bigwig {input.bigwig} --peak_bed {input.bed} --motif {input.motif} --output_dir {output[0]} --extend_region {params.extend_region} --min_local_height {params.min_local_height} --percentile_slope {params.percentile_slope} --min_size {params.min_size} --max_size {params.max_size} --min_score {params.min_score} --gap {params.gap} --gap_depth {params.gap_depth} --moods_threshold {params.moods_threshold} --log_plot {output[4]} &>> {log}
+        python scripts/footprint_extraction.py --fasta {input.fasta} --bigwig {input.bigwig} --peak_bed {input.bed} --motif {params.motif} --output_dir {output[0]} --extend_region {params.extend_region} --min_local_height {params.min_local_height} --percentile_slope {params.percentile_slope} --min_size {params.min_size} --max_size {params.max_size} --min_score {params.min_score} --gap {params.gap} --gap_depth {params.gap_depth} --moods_threshold {params.moods_threshold} --log_plot {output[4]} &>> {log}
         """
 
 rule bed_to_fasta:
