@@ -2,7 +2,7 @@ import glob
 
 go_folder = "5_gene_ontology"
 
-if config['annotation']['gtf']:
+if config['annotation']['gtf'] and config['go_enrichment']['email']:
     rule download_go_associations:
         params:
             obo="http://purl.obolibrary.org/obo/go.obo", # contains graph of go-term associations

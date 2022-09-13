@@ -114,4 +114,4 @@ annotation:
 
 # only run when annotation is available
 go_enrichment:
-  email: '' # Email needed to fetch ncbi data
+  email: '' # Email needed to fetch ncbi data. Skips analysis is empty.
