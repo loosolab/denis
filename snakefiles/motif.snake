@@ -72,10 +72,9 @@ rule merge_stats:
         "../scripts/merge_motif_stats.py"
 
 checkpoint select_known_motifs:
-    input: 
-        config["footprint"]["motif_file"]
     conda: "../environments/motif.yml"
     params:
+        file=config["footprint"]["motif_file"],
         quantity=config["motif"]["known"]["quantity"],
         motifs=config["motif"]["known"]["motifs"]
     output:

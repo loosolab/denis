@@ -14,12 +14,17 @@ OUTPUTDIR = config['run_params']['output']
 output_files = ["config.yml",
                 "2_discovery/2_processed_motif/done.txt",
                 "2_discovery/motif_stats.tsv",
-                "3_evaluation/motif_evaluation/new_vs_db_heatmap.pdf",
-                "3_evaluation/motif_evaluation/new_vs_db_lineplot.pdf",
-                "3_evaluation/motif_evaluation/new_vs_db_boxplot.pdf",
-                "3_evaluation/motif_evaluation/most_similar_motifs.json",
                 "3_evaluation/motif_ranks.tsv",
                 "3_evaluation/ranks_barplot.pdf"]
+
+# skip some evaluation steps if no motif database is provided
+if config["footprint"]["motif_file"]:
+    output_files.extend(
+        ["3_evaluation/motif_evaluation/new_vs_db_heatmap.pdf",
+         "3_evaluation/motif_evaluation/new_vs_db_lineplot.pdf",
+         "3_evaluation/motif_evaluation/new_vs_db_boxplot.pdf",
+         "3_evaluation/motif_evaluation/most_similar_motifs.json"]
+    )
 
 if config['annotation']['gtf']:
     # annotation files
