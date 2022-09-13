@@ -27,7 +27,7 @@ if config['annotation']['gtf']:
     output_files.append("4_annotation/feature_enrichment_table.tsv")
 
     # gene ontology files
-    output_files.append("5_gene_ontology/data/go-basic.obo")
+    output_files.append("5_gene_ontology/done.txt")
 
 output_files = [os.path.join(OUTPUTDIR, f) for f in output_files]
 
