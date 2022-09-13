@@ -1,0 +1,60 @@
+import glob
+
+go_folder = "5_gene_ontology"
+
+if config['annotation']['gtf'] and config['go_enrichment']['email']:
+    rule download_go_associations:
+        params:
+            obo="http://purl.obolibrary.org/obo/go.obo", # contains graph of go-term associations
+            gene2go="https://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2go.gz", # contains gene to go-term mapping
+            gene2ensembl="https://ftp.ncbi.nlm.nih.gov/gene/DATA/gene2ensembl.gz" # contains Entrez GeneID to Ensembl gene-id mapping
+        conda: "../environments/goea.yml"
+        output:
+            obo=os.path.join(OUTPUTDIR, go_folder, "data/go-basic.obo"),
+            gene2go=os.path.join(OUTPUTDIR, go_folder, "data/gene2go"),
+            gene2ensembl=os.path.join(OUTPUTDIR, go_folder, "data/gene2ensembl")
+        script:
+            "../scripts/download_go_associations.py"
+
+    # Get all protein coding genes as background for GO enrichment analysis
+    rule download_background_genes:
+        input:
+            gtf=config['annotation']['gtf'],
+            gene2ensembl=rules.download_go_associations.output.gene2ensembl
+        params:
+            email=config['go_enrichment']['email']
+        conda: "../environments/goea.yml"
+        output:
+            genes=os.path.join(OUTPUTDIR, go_folder, "data/protein_coding_genes.tsv")
+        script:
+            "../scripts/download_background_genes.py"
+
+    checkpoint go_enrichment_analysis:
+        input: 
+            obo=rules.download_go_associations.output.obo,
+            gene2go=rules.download_go_associations.output.gene2go,
+            annotation=rules.uropa_annotate_motifs.output.dir,
+            bg_genes=rules.download_background_genes.output.genes,
+            gene2ensembl=rules.download_go_associations.output.gene2ensembl
+        conda: "../environments/goea.yml"
+        output:
+            dir=directory(os.path.join(OUTPUTDIR, go_folder, "{motif}"))
+        script:
+            "../scripts/go_enrichment_analysis.py"
+
+    def get_names(wildcards):
+        """ Get all motif names. """
+        return list(map(lambda x: os.path.basename(os.path.splitext(x)[0]), glob.glob(os.path.join(checkpoints.rescan.get(**wildcards).output[0], "*.bed"))))
+
+    def goea_done(w):
+        """ Returns dirs of each go analysis. """
+        motif_names = get_names(w)
+        dirs = [checkpoints.go_enrichment_analysis.get(**{"motif": m}).output.dir for m in motif_names]
+
+        return dirs
+
+    rule go_done:
+        input:
+            goea_done
+        output:
+            touch(os.path.join(OUTPUTDIR, go_folder, "done.txt"))

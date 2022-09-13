@@ -111,3 +111,7 @@ annotation:
   threads: 15
   # Additional UROPA parameters (space separated). See https://uropa-manual.readthedocs.io/output.html
   flags: ""
+
+# only run when annotation is available
+go_enrichment:
+  email: '' # Email needed to fetch ncbi data. Skips analysis is empty.
