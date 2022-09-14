@@ -8,6 +8,8 @@ footprint:
   #           Will get peaks unique to the first file.
   score_bigwig: ''
   peak_bed: ''
+  # Leave empty to skip extraction of unknown footprints.
+  # This will consider all footprints unknown and therefore use all in motif discovery.
   motif_file: ''
 
   # peak parameter
