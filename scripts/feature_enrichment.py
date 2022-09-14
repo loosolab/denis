@@ -60,7 +60,9 @@ ranks_table.sort_values(by=["nsites_bound"], ascending=False, inplace=True)
 ranks_table.to_csv(snakemake.output.table, sep="\t", index=False)
 
 # melt table (wide to long format) for plotting
-feature_table = ranks_table.melt(id_vars=["id", "name", "GC%", "nsites_whole_genome", "nsites_open_chromatin", "nsites_bound", "width", "information_content", "enrichment_score"], var_name="feature", value_name="feature_enrichment")
+feature_table = ranks_table.melt(id_vars=["id", "name", "GC%", "width", "information_content", "nsites_footprint", "enrichment_score", "nsites_whole_genome", "nsites_open_chromatin", "nsites_bound"],
+                                 var_name="feature",
+                                 value_name="feature_enrichment")
 
 # sort
 feature_table.sort_values(by=["nsites_bound", "id"], ascending=False, inplace=True)
