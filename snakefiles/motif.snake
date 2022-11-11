@@ -54,7 +54,8 @@ checkpoint motif_processing:
     conda: "../environments/motif.yml"
     params:
         threshold=config["motif"]["processing"]["threshold"],
-        dpi=config["motif"]["processing"]["dpi"]
+        dpi=config["motif"]["processing"]["dpi"],
+        metric="seqcor"
     script:
         "../scripts/motif_processing.py"
 
