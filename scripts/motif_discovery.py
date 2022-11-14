@@ -295,7 +295,16 @@ def invert_dict(d):
         
     return reverse
 
-def filter_sites(xml_file, fasta_file, motif_names, output_file="filtered.fasta", motif_output_dir=None, save="all", prefix="", accepted=True, random_p=0.1, reuse_sites=False):
+def filter_sites(xml_file,
+                 fasta_file,
+                 motif_names,
+                 output_file="filtered.fasta",
+                 motif_output_dir=None,
+                 save="all",
+                 prefix="",
+                 accepted=True,
+                 random_p=0.1,
+                 reuse_sites=False):
     '''
     Remove sites from fasta that are in the xml.
     
@@ -339,8 +348,8 @@ def filter_sites(xml_file, fasta_file, motif_names, output_file="filtered.fasta"
         # contains list of indices of sequences in fasta file for each motif
         motif_sites = dict()
 
-        # contains tuple of flanking sequences for each sequence_id
-        flanks = dict()
+        # contains motif binding sequence for each sequence_id
+        motif_loc = dict()
 
         for motif in root.find("motifs").findall("motif"):
             name = motif.attrib["name"] + " " + motif.attrib["alt"]
@@ -353,13 +362,13 @@ def filter_sites(xml_file, fasta_file, motif_names, output_file="filtered.fasta"
 
                 # add flanking sequences
                 if reuse_sites:
-                    flanks[site_id] = (site.find("left_flank").text, site.find("right_flank").text)
+                    motif_loc[site_id] = "".join([l.attrib["letter_id"] for l in site.find("site")])
             
         # get sites from each motif
         remove_index = [motif_sites[m] for m in motif_names]
         # flatten list; https://stackoverflow.com/questions/952914/how-to-make-a-flat-list-out-of-list-of-lists
-        remove_index = [item for sublist in remove_index for item in sublist]
-        
+        remove_index = [item for sublist in remove_index for item in sublist]    
+    
         # load fasta
         file = SeqIO.parse(fasta_file, "fasta")
         
@@ -369,9 +378,9 @@ def filter_sites(xml_file, fasta_file, motif_names, output_file="filtered.fasta"
                 for index, record in enumerate(file):
                     if index in remove_index:
                         # insert flank sequences
-                        if index in flanks:
+                        if index in motif_loc:
                             # get sequence
-                            left_seq, right_seq = flanks[index]
+                            left_seq, right_seq = record.seq.split(motif_loc[index], 1)
 
                             # prepare ids
                             id_list = record.id.split(":")
@@ -381,18 +390,21 @@ def filter_sites(xml_file, fasta_file, motif_names, output_file="filtered.fasta"
                             id_right = ":".join(id_list[:-1] + [f"{end - len(right_seq)}-{end}"])
 
                             # generate then write records
-                            l_rec = SeqRecord(seq=Seq(left_seq),
-                                              id=id_left,
-                                              name=id_left,
-                                              description=id_left)
+                            if len(left_seq):
+                                l_rec = SeqRecord(seq=Seq(left_seq),
+                                                  id=id_left,
+                                                  name=id_left,
+                                                  description=id_left)
+                                
+                                SeqIO.write(l_rec, out, "fasta")
+                            
+                            if len(right_seq):
+                                r_rec = SeqRecord(seq=Seq(right_seq),
+                                                  id=id_right,
+                                                  name=id_right,
+                                                  description=id_right)
 
-                            r_rec = SeqRecord(seq=Seq(right_seq),
-                                              id=id_right,
-                                              name=id_right,
-                                              description=id_right)
-
-                            SeqIO.write(l_rec, out, "fasta")
-                            SeqIO.write(r_rec, out, "fasta")
+                                SeqIO.write(r_rec, out, "fasta")
 
                         continue
 
@@ -431,7 +443,37 @@ def filter_sites(xml_file, fasta_file, motif_names, output_file="filtered.fasta"
                                 
                     # When sequence belongs to one of the saved motifs remove from output fasta.
                     if site_used:
-                        continue
+                        # insert flank sequences
+                        if reuse_sites and index in motif_loc:
+                            # get sequence
+                            left_seq, right_seq = record.seq.split(motif_loc[index], 1)
+
+                            # prepare ids
+                            id_list = record.id.split(":")
+                            start, end = map(int, id_list[-1].split("-"))
+
+                            id_left = ":".join(id_list[:-1] + [f"{start}-{start + len(left_seq)}"])
+                            id_right = ":".join(id_list[:-1] + [f"{end - len(right_seq)}-{end}"])
+
+                            # generate then write records
+                            if len(left_seq):
+                                l_rec = SeqRecord(seq=Seq(left_seq),
+                                                  id=id_left,
+                                                  name=id_left,
+                                                  description=id_left)
+                                
+                                SeqIO.write(l_rec, out, "fasta")
+                            
+                            if len(right_seq):
+                                r_rec = SeqRecord(seq=Seq(right_seq),
+                                                  id=id_right,
+                                                  name=id_right,
+                                                  description=id_right)
+
+                                SeqIO.write(r_rec, out, "fasta")
+                        else:
+                            continue
+                        
 
                     SeqIO.write(record, out, "fasta")
 
