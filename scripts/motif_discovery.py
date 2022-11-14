@@ -304,7 +304,8 @@ def filter_sites(xml_file,
                  prefix="",
                  accepted=True,
                  random_p=0.1,
-                 reuse_sites=False):
+                 reuse_sites=False,
+                 min_len=4):
     '''
     Remove sites from fasta that are in the xml.
     
@@ -318,6 +319,7 @@ def filter_sites(xml_file,
     :param: accepted If True add prefix "accepted" to all files of motifs declared in motif_names
     :param: random_p Percentage of sites that will be randomly removed if motif_names length is 0. Default = 0.1 (10%).
     :param: reuse_sites Boolean, if True will split sites at motif match location to reuse parts. If False sequence will be discarded.
+    :param: min_len int; Minimum length a sequence can have to be stored if reuse_sites=True.
     '''
     
     # remove sites randomly
@@ -390,7 +392,7 @@ def filter_sites(xml_file,
                             id_right = ":".join(id_list[:-1] + [f"{end - len(right_seq)}-{end}"])
 
                             # generate then write records
-                            if len(left_seq):
+                            if len(left_seq) >= min_len:
                                 l_rec = SeqRecord(seq=Seq(left_seq),
                                                   id=id_left,
                                                   name=id_left,
@@ -398,7 +400,7 @@ def filter_sites(xml_file,
                                 
                                 SeqIO.write(l_rec, out, "fasta")
                             
-                            if len(right_seq):
+                            if len(right_seq) >= min_len:
                                 r_rec = SeqRecord(seq=Seq(right_seq),
                                                   id=id_right,
                                                   name=id_right,
@@ -456,24 +458,24 @@ def filter_sites(xml_file,
                             id_right = ":".join(id_list[:-1] + [f"{end - len(right_seq)}-{end}"])
 
                             # generate then write records
-                            if len(left_seq):
+                            if len(left_seq) >= min_len:
                                 l_rec = SeqRecord(seq=Seq(left_seq),
                                                   id=id_left,
                                                   name=id_left,
                                                   description=id_left)
                                 
                                 SeqIO.write(l_rec, out, "fasta")
-                            
-                            if len(right_seq):
+
+                            if len(right_seq) >= min_len:
                                 r_rec = SeqRecord(seq=Seq(right_seq),
                                                   id=id_right,
                                                   name=id_right,
                                                   description=id_right)
 
                                 SeqIO.write(r_rec, out, "fasta")
-                        else:
-                            continue
-                        
+
+                        # prevent full record to be written
+                        continue
 
                     SeqIO.write(record, out, "fasta")
 
@@ -644,7 +646,8 @@ def motif_discovery(fasta,
                     prefix="iteration_" + str(iteration) + "_",
                     accepted=attempts == 0,
                     random_p=random_sites,
-                    reuse_sites=True)
+                    reuse_sites=True,
+                    min_len=min_len)
         
         # set accepted False if attempts > 0
         if attempts > 0:
