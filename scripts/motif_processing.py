@@ -21,7 +21,7 @@ if len(motif_list) < 1:
     raise Exception("MotifList is empty!")
 
 # cluster then save distance matrix
-cluster = motif_list.cluster(threshold=snakemake.params.threshold, metric="pcc", clust_method="average")
+cluster = motif_list.cluster(threshold=snakemake.params.threshold, metric=snakemake.params.metric, clust_method="average")
 
 # create path if needed
 motif_list.similarity_matrix.to_csv(os.path.join(snakemake.output.dir, "distance.tsv"), sep = '\t')
