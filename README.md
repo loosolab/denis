@@ -11,7 +11,7 @@ git clone https://gitlab.gwdg.de/loosolab/software/motif-discovery-pipeline.git
 ```
 Next the configuration file `config.yml` needs to be adjusted for the data. After this is done the pipeline can be started with the following command:
 ```
-snakemake --configfile [path_to/]config.yml --cores [number of cores] --use-conda 
+snakemake --configfile [path_to/]config.yml --cores [number of cores] --use-conda --conda-frontend conda
 ```
 If [Mamba](https://github.com/mamba-org/mamba) is installed the building time of environments can be greatly reduced running this command instead:
 ```
