@@ -18,5 +18,11 @@ If [Mamba](https://github.com/mamba-org/mamba) is installed the building time of
 snakemake --configfile [path_to/]config.yml --cores [number of cores] --use-conda --conda-frontend mamba
 ```
 
+# Example run
+Data in the `example` folder can be used to do a small example run. Note that GO-enrichment analysis will be skipped unless an email is added in `example/example_config.yml`. Start the example run with:
+```
+snakemake --configfile example/example_config.yml --use-conda --cores [number of cores]
+```
+
 ## Contact
 Hendrik Schultheis (hendrik.schultheis@mpi-bn.mpg.de)
