@@ -23,6 +23,7 @@ Data in the `example` folder can be used to do a small example run. Note that GO
 ```
 snakemake --configfile example/example_config.yml --use-conda --cores [number of cores]
 ```
+Pipeline output will be added to `example_output` folder located in the main directory.
 
 ## Contact
 Hendrik Schultheis (hendrik.schultheis@mpi-bn.mpg.de)
