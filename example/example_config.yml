@@ -119,4 +119,4 @@ annotation:
 
 # only run when annotation is available
 go_enrichment:
-  email: 'hendrik.schultheis@mpi-bn.mpg.de' # Email needed to fetch ncbi data. Skips analysis is empty.
+  email: '' # Email needed to fetch ncbi data. Skips analysis is empty.
