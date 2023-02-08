@@ -14,7 +14,9 @@ def chunks(lst, n):
 gtf = pd.read_csv(snakemake.input.gtf, sep="\t", header=None)
 
 # get gene id to identify organism
-gene = gtf[8].str.extract(r'gene_id "(.+?)".*$').dropna().iat[0, 0]
+for gene in gtf[8].str.extract(r'gene_id "(.+?)".*$')[0]:
+    if gene.startswith("ENS"):
+        break
 
 # load gene2ensembl
 # contains taxid and entrez to ensembl id mapping
