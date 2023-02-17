@@ -31,8 +31,9 @@ if config['annotation']['gtf']:
     output_files.append("4_annotation/feature_enrichment_plot.pdf")
     output_files.append("4_annotation/feature_enrichment_table.tsv")
 
-    # gene ontology files
-    output_files.append("5_gene_ontology/done.txt")
+    if config['go_enrichment']['email']:
+        # gene ontology files
+        output_files.append("5_gene_ontology/done.txt")
 
 output_files = [os.path.join(OUTPUTDIR, f) for f in output_files]
 

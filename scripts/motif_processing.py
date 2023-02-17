@@ -21,7 +21,7 @@ if len(motif_list) < 1:
     raise Exception("MotifList is empty!")
 
 # cluster then save distance matrix
-cluster = motif_list.cluster(threshold=snakemake.params.threshold, metric="pcc", clust_method="average")
+cluster = motif_list.cluster(threshold=snakemake.params.threshold, metric=snakemake.params.metric, clust_method="average")
 
 # create path if needed
 motif_list.similarity_matrix.to_csv(os.path.join(snakemake.output.dir, "distance.tsv"), sep = '\t')
@@ -46,7 +46,7 @@ motif_stats["consensus"] = None
 # combine motifs of each cluster to consensus
 consensus_motifs = MotifList()
 for i, cluster_id in enumerate(cluster):
-    consensus = cluster[cluster_id].create_consensus() # MotifList object with create_consensus method
+    consensus = cluster[cluster_id].create_consensus(metric=snakemake.params.metric) # MotifList object with create_consensus method
     
     consensus_name = f"motif_{i}"
     consensus.id = consensus_name # cluster_id if len(cluster[cluster_id]) > 1 else cluster[cluster_id][0].id # set original motif id if cluster length = 1
@@ -55,8 +55,7 @@ for i, cluster_id in enumerate(cluster):
     # TODO fix add length because of bug
     consensus.length = len(consensus.counts[0])
     
-    consensus_motifs.append(consensus)
-    
+    site_count = 0
     # save consensus motif sites
     # https://stackoverflow.com/a/17749339
     with open(os.path.join(out_path, f"{consensus.id}_{consensus.name}.fasta"), "w") as out_fasta:
@@ -77,6 +76,13 @@ for i, cluster_id in enumerate(cluster):
                         if line.startswith(">"):
                             _, _, chr_, start, end = line.rstrip().replace("-", ":").split(":")
                             out_bed.write("\t".join([chr_, start, end, consensus.id]) + "\n")
+                            
+                            site_count +=1
+    
+    # add site count to motif
+    consensus.n = site_count
+
+    consensus_motifs.append(consensus)
 
 # Save motif stats
 motif_stats.to_csv(snakemake.output.stats, sep="\t", index=False)

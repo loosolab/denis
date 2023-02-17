@@ -7,6 +7,8 @@ from kneed import KneeLocator
 from scipy.optimize import curve_fit
 import pandas as pd
 from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+from Bio.Seq import Seq
 import glob
 import os
 import numpy as np
@@ -293,7 +295,17 @@ def invert_dict(d):
         
     return reverse
 
-def filter_sites(xml_file, fasta_file, motif_names, output_file="filtered.fasta", motif_output_dir=None, save="all", prefix="", accepted=True, random_p=0.1):
+def filter_sites(xml_file,
+                 fasta_file,
+                 motif_names,
+                 output_file="filtered.fasta",
+                 motif_output_dir=None,
+                 save="all",
+                 prefix="",
+                 accepted=True,
+                 random_p=0.1,
+                 reuse_sites=False,
+                 min_len=4):
     '''
     Remove sites from fasta that are in the xml.
     
@@ -306,6 +318,8 @@ def filter_sites(xml_file, fasta_file, motif_names, output_file="filtered.fasta"
     :param: prefix Prefix to files stored in motif_output_dir
     :param: accepted If True add prefix "accepted" to all files of motifs declared in motif_names
     :param: random_p Percentage of sites that will be randomly removed if motif_names length is 0. Default = 0.1 (10%).
+    :param: reuse_sites Boolean, if True will split sites at motif match location to reuse parts. If False sequence will be discarded.
+    :param: min_len int; Minimum length a sequence can have to be stored if reuse_sites=True.
     '''
     
     # remove sites randomly
@@ -336,25 +350,64 @@ def filter_sites(xml_file, fasta_file, motif_names, output_file="filtered.fasta"
         # contains list of indices of sequences in fasta file for each motif
         motif_sites = dict()
 
+        # contains motif binding sequence for each sequence_id
+        motif_loc = dict()
+
         for motif in root.find("motifs").findall("motif"):
             name = motif.attrib["name"] + " " + motif.attrib["alt"]
 
-            motif_sites[name] = [int(sites.attrib["sequence_id"].split("_")[1])
-                                for sites in motif.find("contributing_sites").findall("contributing_site")]
+            for site in motif.find("contributing_sites").findall("contributing_site"):
+                site_id = int(site.attrib["sequence_id"].split("_")[1])
+
+                # add site
+                motif_sites.setdefault(name, []).append(site_id)
+
+                # add flanking sequences
+                if reuse_sites:
+                    motif_loc[site_id] = "".join([l.attrib["letter_id"] for l in site.find("site")])
             
         # get sites from each motif
         remove_index = [motif_sites[m] for m in motif_names]
         # flatten list; https://stackoverflow.com/questions/952914/how-to-make-a-flat-list-out-of-list-of-lists
-        remove_index = [item for sublist in remove_index for item in sublist]
-        
+        remove_index = [item for sublist in remove_index for item in sublist]    
+    
         # load fasta
         file = SeqIO.parse(fasta_file, "fasta")
         
         # filter and write fasta
         with open(output_file, "w") as out:
             if motif_output_dir is None:
-                for index, record in enumerate(file):            
+                for index, record in enumerate(file):
                     if index in remove_index:
+                        # insert flank sequences
+                        if index in motif_loc:
+                            # get sequence
+                            left_seq, right_seq = record.seq.split(motif_loc[index], 1)
+
+                            # prepare ids
+                            id_list = record.id.split(":")
+                            start, end = map(int, id_list[-1].split("-"))
+
+                            id_left = ":".join(id_list[:-1] + [f"{start}-{start + len(left_seq)}"])
+                            id_right = ":".join(id_list[:-1] + [f"{end - len(right_seq)}-{end}"])
+
+                            # generate then write records
+                            if len(left_seq) >= min_len:
+                                l_rec = SeqRecord(seq=Seq(left_seq),
+                                                  id=id_left,
+                                                  name=id_left,
+                                                  description=id_left)
+                                
+                                SeqIO.write(l_rec, out, "fasta")
+                            
+                            if len(right_seq) >= min_len:
+                                r_rec = SeqRecord(seq=Seq(right_seq),
+                                                  id=id_right,
+                                                  name=id_right,
+                                                  description=id_right)
+
+                                SeqIO.write(r_rec, out, "fasta")
+
                         continue
 
                     SeqIO.write(record, out, "fasta")
@@ -392,6 +445,36 @@ def filter_sites(xml_file, fasta_file, motif_names, output_file="filtered.fasta"
                                 
                     # When sequence belongs to one of the saved motifs remove from output fasta.
                     if site_used:
+                        # insert flank sequences
+                        if reuse_sites and index in motif_loc:
+                            # get sequence
+                            left_seq, right_seq = record.seq.split(motif_loc[index], 1)
+
+                            # prepare ids
+                            id_list = record.id.split(":")
+                            start, end = map(int, id_list[-1].split("-"))
+
+                            id_left = ":".join(id_list[:-1] + [f"{start}-{start + len(left_seq)}"])
+                            id_right = ":".join(id_list[:-1] + [f"{end - len(right_seq)}-{end}"])
+
+                            # generate then write records
+                            if len(left_seq) >= min_len:
+                                l_rec = SeqRecord(seq=Seq(left_seq),
+                                                  id=id_left,
+                                                  name=id_left,
+                                                  description=id_left)
+                                
+                                SeqIO.write(l_rec, out, "fasta")
+
+                            if len(right_seq) >= min_len:
+                                r_rec = SeqRecord(seq=Seq(right_seq),
+                                                  id=id_right,
+                                                  name=id_right,
+                                                  description=id_right)
+
+                                SeqIO.write(r_rec, out, "fasta")
+
+                        # prevent full record to be written
                         continue
 
                     SeqIO.write(record, out, "fasta")
@@ -562,7 +645,9 @@ def motif_discovery(fasta,
                     save="all" if save_discarded else "accepted" if attempts == 0 else "none",
                     prefix="iteration_" + str(iteration) + "_",
                     accepted=attempts == 0,
-                    random_p=random_sites)
+                    random_p=random_sites,
+                    reuse_sites=True,
+                    min_len=min_len)
         
         # set accepted False if attempts > 0
         if attempts > 0:

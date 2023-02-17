@@ -11,12 +11,19 @@ git clone https://gitlab.gwdg.de/loosolab/software/motif-discovery-pipeline.git
 ```
 Next the configuration file `config.yml` needs to be adjusted for the data. After this is done the pipeline can be started with the following command:
 ```
-snakemake --configfile [path_to/]config.yml --cores [number of cores] --use-conda 
+snakemake --configfile [path_to/]config.yml --cores [number of cores] --use-conda --conda-frontend conda
 ```
 If [Mamba](https://github.com/mamba-org/mamba) is installed the building time of environments can be greatly reduced running this command instead:
 ```
 snakemake --configfile [path_to/]config.yml --cores [number of cores] --use-conda --conda-frontend mamba
 ```
+
+# Example run
+Data in the `example` folder can be used to do a small example run. Note that GO-enrichment analysis will be skipped unless an email is added in `example/example_config.yml`. Start the example run with:
+```
+snakemake --configfile example/example_config.yml --use-conda --cores [number of cores]
+```
+Pipeline output will be added to `example_output` folder located in the main directory.
 
 ## Contact
 Hendrik Schultheis (hendrik.schultheis@mpi-bn.mpg.de)
