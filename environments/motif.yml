@@ -7,7 +7,7 @@ channels:
 dependencies:
   - tobias
   - scipy
-  - pandas=1.2.5 # https://github.com/vanheeringen-lab/gimmemotifs/issues/168  TODO remove version when issue is resolved.
+  - pandas
   - kneed
   - biopython
   - seaborn
@@ -15,11 +15,7 @@ dependencies:
   - lxml
   - numpy>=1.18
   - meme>=5.3.0
-  - cython # TODO remove when tobias is updated
-  - pip
-  - pip:
-#    - git+https://github.com/loosolab/TOBIAS.git@dev # TODO remove when tobias is updated
-    - gimmemotifs==0.16.0 # https://github.com/vanheeringen-lab/gimmemotifs/issues/243 will be fixed when > 0.17.0 is available
+  - gimmemotifs>=0.18
   - sklearn-contrib-lightning # needed by gimmemotifs
   - pyarrow # needed by gimmemotifs
   - bedtools
