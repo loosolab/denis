@@ -1,5 +1,6 @@
 import pandas as pd
 from Bio import Entrez
+import time
 
 def chunks(lst, n):
     """
@@ -36,6 +37,9 @@ handle = Entrez.esearch(db="gene",
                         retstart=0,
                         retmax=1)
 
+# sleep as queries are limited to 3 a second
+time.sleep(0.34)
+
 record = Entrez.read(handle)
 
 count = int(record["Count"])
@@ -51,6 +55,9 @@ for entry_ids in chunks(range(count), 100000):
     record = Entrez.read(handle)
     
     ids += record["IdList"]
+    
+    # sleep as queries are limited to 3 a second
+    time.sleep(0.34)
 
 # -- download genes -- #
 # NOTE: split ids into chunks as fetching everything omits results
@@ -62,6 +69,9 @@ for id_chunk in chunks(ids, 1000):
             sep="\t"
         )
     )
+    
+    # sleep as queries are limited to 3 a second
+    time.sleep(0.34)
 
 table = pd.concat(table_chunks)
 
