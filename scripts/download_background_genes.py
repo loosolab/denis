@@ -15,7 +15,7 @@ gtf = pd.read_csv(snakemake.input.gtf, sep="\t", header=None)
 
 # get gene id to identify organism
 for gene in gtf[8].str.extract(r'gene_id "(.+?)".*$')[0]:
-    if gene.startswith("ENS"):
+    if str(gene).startswith("ENS"):
         break
 
 # load gene2ensembl
