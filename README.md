@@ -3,13 +3,15 @@
 ## Introduction
 With ATAC-seq (Assay for Transposase-Accessible Chromatin using sequencing) the genome-wide chromatin accessibility can be detected. This is done by a hyperactive Tn5 transposase, which cuts fragments only in open regions of the DNA. After amplification, sequencing, and following analysis of the ATAC-seq data, open chromatin regions are identified as an accumulation of reads. Further focus on open chromatin regions reveals footprints as small spaces of less read coverage, where transcription factors were bound. Applied to a motif database, footprints can be linked to a motif, and assumptions about transcription factor roles, in the regulatory network can be inferred. But not all of the footprints are traceable to motifs, implying the existence of unknown motifs. To unfold function and binding of de novo motifs, we present a pipeline that integrates with the [TOBIAS framework](https://github.com/loosolab/TOBIAS/) and enhances it for motif generation.
 
-<img width="70%" align="right" src="/figures/figure1.png">
+<div>
+<img width="70%" align="left" src="/figures/figure1.png">
 
 <ol type="a">
     <li>The framework receives continuous binding scores as minimal input. In the first step, the binding scores are scanned and FPs are extracted in a genome wide scale. If binding scores for two conditions are provided as input, the framework calculates differential binding scores.</li>
     <li>Sequences at detected FPs are extracted and used to perform data driven de novo motif prediction. In an iterative process, most prominent motifs are extracted and corresponding sequences are removed from the <li>motif discovery pool. FPs not (yet) used are kept for the following discovery run.</li>
 c) Resulting motifs are subjected to downstream analysis. DENIS provides i) an individual motif site annotation module (e.g. annotation to genes), ii) a motif database comparison module, iii) a module to compute global binding site enrichment in open chromatin, and iv) based on the annotation module a motif based gene set enrichment analysis (GSEA) module.</li>
 </ol>
+</div>
 
 ## How to run
 To run this pipeline make sure Snakemake and Conda are installed and working on your machine.
