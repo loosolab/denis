@@ -13,9 +13,9 @@ With ATAC-seq (Assay for Transposase-Accessible Chromatin using sequencing) the 
 <br/>
 <br/>
 <br/>
+<br/>
 <ol type="a">
     <li>The framework receives continuous binding scores as minimal input. In the first step, the binding scores are scanned and FPs are extracted in a genome wide scale. If binding scores for two conditions are provided as input, the framework calculates differential binding scores.</li>
-<br/>
 <br/>
 <br/>
     <li>Sequences at detected FPs are extracted and used to perform data driven de novo motif prediction. In an iterative process, most prominent motifs are extracted and corresponding sequences are removed from the motif discovery pool. FPs not (yet) used are kept for the following discovery run.</li>
