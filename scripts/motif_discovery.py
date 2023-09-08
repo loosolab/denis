@@ -21,6 +21,7 @@ import re
 from decimal import Decimal
 from xml.etree import ElementTree
 from lmfit import Model
+import tqdm
 
 from tobias.utils.motifs import MotifList
 
@@ -50,6 +51,7 @@ def run_meme(input_fasta, output_dir, threads=8, min_length=4, max_length=20, e_
                 input_fasta,
                 "-o " + output_dir,
                 "-dna",
+                "-revcomp",
                 f"-mod {mod}", # distribution of motif sites
                 f"-objfun {objfun}",
                 f"-minw {min_length}", # min motif length
@@ -178,16 +180,18 @@ def create_motif_stats(meme_file):
         motif.information_content()
         motif.gc_content()
         
-        motif_info = {'id': motif.id,
-                      'name': motif.name, 
-                      'information_content': motif.ic,
-                      'GC%': motif.gc,
-                      'nsites': int(motif.info['nsites']),
-                      'e_value': float(motif.info['E']),
-                      'log_likelihood': int(addon_info[f"{motif.id} {motif.name}"]['llr']),
-                      'width': int(motif.info['w'])}
+        motif_info = pd.DataFrame(
+            {'id': [motif.id],
+             'name': motif.name, 
+             'information_content': motif.ic,
+             'GC%': motif.gc,
+             'nsites': int(motif.info['nsites']),
+             'e_value': float(motif.info['E']),
+             'log_likelihood': int(addon_info[f"{motif.id} {motif.name}"]['llr']),
+             'width': int(motif.info['w'])}
+        )
 
-        motif_stats = motif_stats.append(motif_info, ignore_index=True)
+        motif_stats = pd.concat([motif_stats, motif_info], ignore_index=True)
     
     # add percentage
     motif_stats["nsites percentage"] = motif_stats["nsites"] / motif_stats["nsites"].sum()
@@ -313,7 +317,7 @@ def filter_sites(xml_file,
     :param: fasta_file Path to input fasta. All sequences available to meme.
     :param: motif_names Name of motif which sites should be removed. If empty list removes given percentage (See param random_p) of sites at random.
     :param: output_file Fasta without the sequences that where used in a motif (occured in xml)
-    :param: motif_output_dir
+    :param: motif_output_dir If set write fasta for each motif.
     :param: save If "all" all will be saved. If "accepted" only accepted motifs (in motif_names) will be stored. If 'none' no motifs will be stored.
     :param: prefix Prefix to files stored in motif_output_dir
     :param: accepted If True add prefix "accepted" to all files of motifs declared in motif_names
@@ -321,13 +325,11 @@ def filter_sites(xml_file,
     :param: reuse_sites Boolean, if True will split sites at motif match location to reuse parts. If False sequence will be discarded.
     :param: min_len int; Minimum length a sequence can have to be stored if reuse_sites=True.
     '''
-    
+    # get number of records in fasta
+    fasta_len = len([1 for line in open(fasta_file) if line.startswith(">")])
+
     # remove sites randomly
     if len(motif_names) < 1:
-        
-        # get number of records in fasta
-        fasta_len = len([1 for line in open(fasta_file) if line.startswith(">")])
-        
         # index of sites to remove
         remove_index = random.sample(range(fasta_len), fasta_len * random_p)
         
@@ -336,148 +338,133 @@ def filter_sites(xml_file,
         
         # filter and write fasta
         with open(output_file, "w") as out:
-            for index, record in enumerate(file):
+            for index, record in tqdm.tqdm(enumerate(file), total=fasta_len):
                 if index in remove_index:
                     continue
                 
                 SeqIO.write(record, out, "fasta")
-    
+
+    # remove used sequences
     else:
+        ##### load used sequences #####
         # load xml
         xml = ElementTree.parse(xml_file)
         root = xml.getroot()
+
+        # fasta sequence id -> xml sequence id
+        fasta_xml = {seq.attrib["name"]: seq.attrib["id"] for seq in root.find("training_set").findall("sequence")}
+        # xml sequence id -> fasta sequence id
+        xml_fasta = {seq.attrib["id"]: seq.attrib["name"] for seq in root.find("training_set").findall("sequence")}
+        # fasta sequence id -> [motif binding sequence(s)]
+        motif_bs = {}
+        # motif name -> [xml sequence id]; sequences used by a motif
+        motif_xml = {}
+        # fasta seq ids of records belonging to an accepted motif; will be removed
+        omit_rec = set()
         
-        # contains list of indices of sequences in fasta file for each motif
-        motif_sites = dict()
 
-        # contains motif binding sequence for each sequence_id
-        motif_loc = dict()
-
+        # populate motif_bs, motif
         for motif in root.find("motifs").findall("motif"):
             name = motif.attrib["name"] + " " + motif.attrib["alt"]
 
             for site in motif.find("contributing_sites").findall("contributing_site"):
-                site_id = int(site.attrib["sequence_id"].split("_")[1])
+                site_id = site.attrib["sequence_id"]
 
-                # add site
-                motif_sites.setdefault(name, []).append(site_id)
+                # get motif associated sequence ids
+                motif_xml.setdefault(name, []).append(site_id)
 
-                # add flanking sequences
-                if reuse_sites:
-                    motif_loc[site_id] = "".join([l.attrib["letter_id"] for l in site.find("site")])
-            
-        # get sites from each motif
-        remove_index = [motif_sites[m] for m in motif_names]
-        # flatten list; https://stackoverflow.com/questions/952914/how-to-make-a-flat-list-out-of-list-of-lists
-        remove_index = [item for sublist in remove_index for item in sublist]    
-    
-        # load fasta
-        file = SeqIO.parse(fasta_file, "fasta")
-        
-        # filter and write fasta
-        with open(output_file, "w") as out:
-            if motif_output_dir is None:
-                for index, record in enumerate(file):
-                    if index in remove_index:
-                        # insert flank sequences
-                        if index in motif_loc:
-                            # get sequence
-                            left_seq, right_seq = record.seq.split(motif_loc[index], 1)
+                # get motif binding sequence
+                seq = "".join([letter.attrib["letter_id"] for letter in site.find("site")])
 
-                            # prepare ids
-                            id_list = record.id.split(":")
-                            start, end = map(int, id_list[-1].split("-"))
+                if site.attrib["strand"] == "minus":
+                    seq = str(Seq(seq).reverse_complement())
 
-                            id_left = ":".join(id_list[:-1] + [f"{start}-{start + len(left_seq)}"])
-                            id_right = ":".join(id_list[:-1] + [f"{end - len(right_seq)}-{end}"])
+                motif_bs.setdefault(xml_fasta[site_id], []).append(seq)
 
-                            # generate then write records
-                            if len(left_seq) >= min_len:
-                                l_rec = SeqRecord(seq=Seq(left_seq),
-                                                  id=id_left,
-                                                  name=id_left,
-                                                  description=id_left)
-                                
-                                SeqIO.write(l_rec, out, "fasta")
-                            
-                            if len(right_seq) >= min_len:
-                                r_rec = SeqRecord(seq=Seq(right_seq),
-                                                  id=id_right,
-                                                  name=id_right,
-                                                  description=id_right)
+                if name in motif_names:
+                    omit_rec.add(xml_fasta[site_id])
 
-                                SeqIO.write(r_rec, out, "fasta")
+        ##### fasta #####
+        fasta = SeqIO.parse(fasta_file, "fasta")
 
-                        continue
+        # individual motif fastas
+        # write all files add once for better performance
+        ind_fastas = {}
+        full_fasta = []
 
-                    SeqIO.write(record, out, "fasta")
-            else:
+        # iterate over all records in fasta
+        for record in tqdm.tqdm(fasta, total=fasta_len):
+            # write individual motif fasta
+            if motif_output_dir:
                 # create motif output dir if needed
                 os.makedirs(motif_output_dir, exist_ok=True)
-                
-                # revert motif_sites keys and elements
-                reverse_motif_sites = invert_dict(motif_sites)
-                
-                for index, record in enumerate(file):
-                    # whether the record is used in a motif
-                    site_used = False
-                    # write sequence to file if it was used in a motif
-                    if index in reverse_motif_sites.keys():
-                        # save all or only filtered
-                        if save in ["all", "accepted"] or index in remove_index:
-                            for motif_name in reverse_motif_sites[index]:
-                                # Skip if seq does not belong to an accepted motif and save all is off or none should be saved.
-                                if save in ["accepted"] and not motif_name in motif_names or save in ["none"]:
-                                    continue
-                                
-                                tmp_prefix = prefix
-                                if motif_name in motif_names and accepted:
-                                    tmp_prefix = prefix + "accepted_"
-                                
-                                # create motif fasta + path and remove whitespaces
-                                motif_fasta = os.path.join(motif_output_dir, tmp_prefix + motif_name + ".fasta")
-                                motif_fasta = motif_fasta.replace(" ", "_")
-                                
-                                with open(motif_fasta, "a") as motif_out:
-                                    SeqIO.write(record, motif_out, "fasta")
-                                
-                                site_used = True
-                                
-                    # When sequence belongs to one of the saved motifs remove from output fasta.
-                    if site_used:
-                        # insert flank sequences
-                        if reuse_sites and index in motif_loc:
-                            # get sequence
-                            left_seq, right_seq = record.seq.split(motif_loc[index], 1)
 
-                            # prepare ids
-                            id_list = record.id.split(":")
-                            start, end = map(int, id_list[-1].split("-"))
-
-                            id_left = ":".join(id_list[:-1] + [f"{start}-{start + len(left_seq)}"])
-                            id_right = ":".join(id_list[:-1] + [f"{end - len(right_seq)}-{end}"])
-
-                            # generate then write records
-                            if len(left_seq) >= min_len:
-                                l_rec = SeqRecord(seq=Seq(left_seq),
-                                                  id=id_left,
-                                                  name=id_left,
-                                                  description=id_left)
-                                
-                                SeqIO.write(l_rec, out, "fasta")
-
-                            if len(right_seq) >= min_len:
-                                r_rec = SeqRecord(seq=Seq(right_seq),
-                                                  id=id_right,
-                                                  name=id_right,
-                                                  description=id_right)
-
-                                SeqIO.write(r_rec, out, "fasta")
-
-                        # prevent full record to be written
+                for name, seq_ids in motif_xml.items():
+                    # Skip if seq does not belong to an accepted motif and save all is off or none should be saved.
+                    if save in ["accepted"] and not name in motif_names or save in ["none"]:
                         continue
 
-                    SeqIO.write(record, out, "fasta")
+                    # skip sequences not associated with the motif
+                    if fasta_xml[record.id] not in seq_ids:
+                        continue
+
+                    # add "accepted" prefix to individual motif output file
+                    tmp_prefix = prefix
+                    if name in motif_names and accepted:
+                        tmp_prefix = prefix + "accepted_"
+
+                    # create motif fasta + path and remove whitespaces
+                    motif_fasta = os.path.join(motif_output_dir, tmp_prefix + name + ".fasta")
+                    motif_fasta = motif_fasta.replace(" ", "_")
+
+                    # store seq for later writing
+                    ind_fastas.setdefault(motif_fasta, []).append(record)
+
+            # write to full output fasta
+            if reuse_sites and record.id in omit_rec:
+                # remove motif binding location and keep flanking sequences
+                for bind_seq in motif_bs[record.id]:
+                    # split sequence
+                    left_flank, right_flank = record.seq.split(bind_seq, 1)
+
+                    # prepare ids; assumes fasta id format "[chrX]:[start]-[end]"
+                    id_list = record.id.split(":")
+                    start, end = map(int, id_list[-1].split("-"))
+                    id_left = ":".join(id_list[:-1] + [f"{start}-{start + len(left_flank)}"])
+                    id_right = ":".join(id_list[:-1] + [f"{end - len(right_flank)}-{end}"])
+
+                    # generate record for each flank
+                    if len(left_flank) >= min_len:
+                        l_rec = SeqRecord(
+                            seq=Seq(left_flank),
+                            id=id_left,
+                            name=id_left,
+                            description=id_left
+                        )
+
+                        full_fasta.append(l_rec)
+
+                    if len(right_flank) >= min_len:
+                        r_rec = SeqRecord(
+                            seq=Seq(right_flank),
+                            id=id_right,
+                            name=id_right,
+                            description=id_right
+                        )
+
+                        full_fasta.append(r_rec)
+            elif record.id not in omit_rec:
+                # write full record
+                full_fasta.append(record)
+
+        # write full fasta
+        with open(output_file, "w") as out:
+            SeqIO.write(full_fasta, out, "fasta")
+
+        # write individual motif fastas
+        for m_fasta, records in ind_fastas.items():
+            with open(m_fasta, "w") as out_file:
+                SeqIO.write(records, out_file, "fasta")
 
 def saveMotifs(input_file, output_dir, motif_names, prefix):
     '''
@@ -521,7 +508,8 @@ def motif_discovery(fasta,
                     nmotifs=30,
                     minsites=-1,
                     maxsites=-1,
-                    maxiter=-1):
+                    maxiter=-1,
+                    reuse_sites=True):
     '''
     Run motif discovery
     
@@ -554,6 +542,7 @@ def motif_discovery(fasta,
     :param minsites: -1 for default or integer specifying minimum number of sites for motifs. see https://meme-suite.org/meme/doc/meme.html?man_type=web
     :param maxsites: -1 for default or integer specifying maximum number of sites for motifs. see https://meme-suite.org/meme/doc/meme.html?man_type=web
     :param maxiter: Stop after x iterations. -1 = unlimited
+    :param: reuse_sites Boolean, if True will split sites at motif match location to reuse parts. If False sequence will be discarded.
     '''
 
     finished = False
@@ -646,7 +635,7 @@ def motif_discovery(fasta,
                     prefix="iteration_" + str(iteration) + "_",
                     accepted=attempts == 0,
                     random_p=random_sites,
-                    reuse_sites=True,
+                    reuse_sites=reuse_sites,
                     min_len=min_len)
         
         # set accepted False if attempts > 0
