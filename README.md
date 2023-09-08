@@ -22,7 +22,14 @@ With ATAC-seq (Assay for Transposase-Accessible Chromatin using sequencing) the 
 <br/>
 <br/>
 <br/>
-    <li>Resulting motifs are subjected to downstream analysis. DENIS provides i) an individual motif site annotation module (e.g. annotation to genes), ii) a motif database comparison module, iii) a module to compute global binding site enrichment in open chromatin, and iv) based on the annotation module a motif based gene set enrichment analysis (GSEA) module.</li>
+    <li>Resulting motifs are subjected to downstream analysis. DENIS provides:
+    <ol type="i">
+      <li>an individual motif site annotation module (e.g. annotation to genes)</li>
+      <li>a motif database comparison module</li>
+      <li>a module to compute global binding site enrichment in open chromatin</li>
+      <li>based on the annotation module a motif based gene set enrichment analysis (GSEA) module</li>
+    </ol>
+    </li>
 </ol>
 
 <br clear="right"/>
