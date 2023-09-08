@@ -7,10 +7,7 @@ With ATAC-seq (Assay for Transposase-Accessible Chromatin using sequencing) the 
 
 # Overview
 <img align="right" width="50%" src="/figures/figure1.png">
-<br/>
-<br/>
-<br/>
-<br/>
+
 <ol type="a">
     <li>The framework receives continuous binding scores as minimal input. In the first step, the binding scores are scanned and FPs are extracted in a genome wide scale. If binding scores for two conditions are provided as input, the framework calculates differential binding scores.</li>
 <br/>
