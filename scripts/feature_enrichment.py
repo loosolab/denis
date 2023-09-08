@@ -32,7 +32,7 @@ for f_table, bedfile in zip(snakemake.input.hits_tables, snakemake.input.bed_tab
     
     motif_table = pd.DataFrame({"motif": motif_name, "feature": enrichment.index, "enrichment": enrichment.values, "nsites_bound": unique_peaks})
     
-    feature_table = feature_table.append(motif_table, ignore_index=True, sort=False)
+    feature_table = pd.concat([feature_table, motif_table], ignore_index=True, sort=False)
 
 # set feature NaN to 'Other'
 feature_table.loc[feature_table["feature"].isnull(), "feature"] = "Other"
